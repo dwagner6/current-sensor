@@ -4,7 +4,7 @@
 #include <stdint.h> // Include stdint.h for fixed-width data types
 #include <Bounce2.h>
 #include <Wire.h>
-#include <esp32-hal.h>
+#include <esp32-hal-adc.h>
 
 #include "pins.h"
 #include <pulser.h>
