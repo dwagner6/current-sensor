@@ -4,6 +4,7 @@
 #include <stdint.h> // Include stdint.h for fixed-width data types
 #include <Bounce2.h>
 #include <Wire.h>
+#include <esp32-hal.h>
 
 #include "pins.h"
 #include <pulser.h>
@@ -15,18 +16,33 @@
 #define DEBOUNCE_INTERVAL_MS 5
 #define INPUT_SIZE 30
 #define DELAY 1 // supposedly uS
+#define ADC_CONVERSIONS_PER_PIN 5
+
+uint8_t adcPins[] = {PIN_ADC_1A, PIN_ADC_5A, \
+                    PIN_ADC_10A, PIN_ADC_20A};
+uint8_t adcPinCount = sizeof(adcPins) / sizeof(uint8_t);
+volatile bool adcConversionDone = false;
+adc_continuous_data_t *adcResult = NULL;
 
 volatile bool ledcFallingEdgeDetected = false;
-volatile uint16_t adcValues[NUM_READINGS] = {0};
-volatile uint8_t adcIndex = 0;
-volatile int32_t adcSum = 0;
+volatile uint16_t adcValues5A[NUM_READINGS] = {0};
+volatile uint8_t adcIndex5A = 0;
+volatile int32_t adcSum5A = 0;
+volatile uint16_t adcValues1A[NUM_READINGS] = {0};
+volatile uint8_t adcIndex1A = 0;
+volatile int32_t adcSum1A = 0;
+volatile uint16_t adcValues20A[NUM_READINGS] = {0};
+volatile uint8_t adcIndex20A = 0;
+volatile int32_t adcSum20A = 0;
 volatile uint64_t isr_count = 0;
 volatile bool isr_indicator_status = LOW;
 volatile uint32_t pulseWidth = DEFAULT_PULSEWIDTH;
 volatile bool ledcEnabled = true;
 volatile bool transmitReading = false;
 volatile bool flipbit = false;
-uint32_t averageMillivolts;
+uint32_t averageMillivolts1A;
+uint32_t averageMillivolts5A;
+uint32_t averageMillivolts20A;
 hw_timer_t *timer = NULL;
 volatile bool timerEnabled = false;
 bool sampleinterruptdetected = false;
@@ -36,7 +52,8 @@ uint16_t current = 0;
 uint16_t vout_mv = 0;
 char teststr[INPUT_SIZE + 1];
 int8_t i = -1;
-uint16_t reg[6] = {0, 0, 0, 0, 0, 0};
+uint16_t reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
+                    0, 0, 0, 0, 0};
 uint16_t num = 666;
 String outputstring;
 
@@ -48,13 +65,7 @@ void int_to_hex_str(uint8_t num_digits, uint32_t value, char * hex_string);
 void IRAM_ATTR onFallingedge()
 { // on the rising edge of the LEDC pulse
     // on rising edge starts another timer alarm
-    digitalWrite(TIMER_PIN, HIGH);
     sampleinterruptdetected = true;
-    adcValues[adcIndex] = analogReadMilliVolts(PIN_ADC_1A);
-    adcSum = adcSum + adcValues[adcIndex] - adcValues[(adcIndex + 1) % NUM_READINGS];
-    averageMillivolts = adcSum / NUM_READINGS;
-    adcIndex = (adcIndex + 1) % NUM_READINGS;
-    digitalWrite(TIMER_PIN, LOW);
 }
 
 void setup()
@@ -74,13 +85,14 @@ void setup()
 
     Serial.println("ESP32 Pulser setup passed!");
 
-    Serial.println("Available commands:");
-    Serial.println("freq");
-    Serial.println("width");
-    Serial.println("curr");
-    Serial.println("onoff");
-    Serial.println("vout");
-    Serial.println("status");
+    Serial.println("\nAvailable commands:");
+    Serial.println("\tfreq <Hz> \tset frequency");
+    Serial.println("\twidth <ns> \tset pulse width");
+    Serial.println("\tcurr <mA> \tset current");
+    Serial.println("\tonoff <0/1> \tenable/disable output");
+    Serial.println("\tvout <mV> \tset compliance voltage");
+    Serial.println("\tstatus <0/1> \tread TPS status regs");
+    Serial.println("\tadc <0/1> \tdisplay adc raw readings");
     Serial.println("'<cmd> ?' to view current setting");
 }
 
@@ -91,6 +103,24 @@ void loop()
     if (sampleinterruptdetected)
     {
         sampleinterruptdetected = false;
+
+        digitalWrite(TIMER_PIN, HIGH);
+
+        adcValues1A[adcIndex1A] = analogReadMilliVolts(PIN_ADC_1A);
+        adcSum1A = adcSum1A + adcValues1A[adcIndex1A] - adcValues1A[(adcIndex1A + 1) % NUM_READINGS];
+        averageMillivolts1A = adcSum1A / NUM_READINGS;
+        adcIndex1A = (adcIndex1A + 1) % NUM_READINGS;
+
+        adcValues5A[adcIndex5A] = analogReadMilliVolts(PIN_ADC_5A);
+        adcSum5A = adcSum5A + adcValues5A[adcIndex5A] - adcValues5A[(adcIndex5A + 1) % NUM_READINGS];
+        averageMillivolts5A = adcSum5A / NUM_READINGS;
+        adcIndex5A = (adcIndex5A + 1) % NUM_READINGS;
+
+        adcValues20A[adcIndex20A] = analogReadMilliVolts(PIN_ADC_20A);
+        adcSum20A = adcSum20A + adcValues20A[adcIndex20A] - adcValues20A[(adcIndex20A + 1) % NUM_READINGS];
+        averageMillivolts20A = adcSum20A / NUM_READINGS;
+        adcIndex20A = (adcIndex20A + 1) % NUM_READINGS;
+        digitalWrite(TIMER_PIN, LOW);
     }
     else
     {
@@ -133,6 +163,10 @@ void loop()
             else if (tokens.equals("status"))
             {
                 i = 6;
+            }
+            else if (tokens.equals("adc"))
+            {
+                i = 7;
             }
             else
                 Serial.println("Error!");
@@ -205,7 +239,22 @@ void loop()
             Serial.println(vout_mv);
 
             if (reg[5])
+            {
                 tps55289_status_report();
+                reg[5] = 0;
+            }
+            
+            if (reg[6])
+            {
+                Serial.print("ADC 5A:   ");
+                Serial.print(averageMillivolts5A, DEC);
+                Serial.println();
+
+                Serial.print("ADC 20A: ");
+                Serial.print(averageMillivolts20A, DEC);
+                Serial.println();
+                reg[6] = 0;
+            }
 
             set_ledc_timer();   // set new ledc frequence
             updatePulseWidth(); // set new pulsewidth
