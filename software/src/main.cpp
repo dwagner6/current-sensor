@@ -36,7 +36,7 @@ uint16_t current = 0;
 uint16_t vout_mv = 0;
 char teststr[INPUT_SIZE + 1];
 int8_t i = -1;
-uint16_t reg[6] = {0, 0, 0, 0, 0, 0};
+uint16_t reg[6] = {0, 0, 0, 0, 0, 1};
 uint16_t num = 666;
 String outputstring;
 
@@ -135,7 +135,9 @@ void loop()
                 i = 6;
             }
             else
+            {
                 Serial.println("Error!");
+            }
 
             token = strtok(NULL, "     ");
             tokens = token;

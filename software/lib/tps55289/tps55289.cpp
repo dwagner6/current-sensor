@@ -21,6 +21,7 @@
 #define VOUT_FS_REG 0x04
 #define VOUT_FS_REG_MASK 0x83
 #define MODE_REG 0x06
+#define FPWM_ENABLE_BIT 1U
 #define STATUS_REG 0x07
 #define VOUT_SR_REG 0x03
 #define STATUS_BIT_MASK 0x03
@@ -29,13 +30,18 @@
 #define SCP_BIT_MASK 0x80
 #define OCP_DELAY_BIT 0x04
 #define OCP_DELAY_NONE 0x00
-#define OCP_DELAY_3MS 0x11
+#define OCP_DELAY_3MS 0x11U
+#define OCP_DELAY_12MS 0x31U
+#define OCP_DISABLE  0x00
 #define OE_BIT 7
 #define DSCHG_BIT 4
+#define HICCUP_EN_BIT 5
 #define VOUT_MIN_MV 800
 #define VOUT_MAX_MV 20000
 #define REF_MIN 0x0000 // Vout = 0.8V
 #define REF_MAX 0x0780 // Vout = 20V
+#define CDC_REG 0x05
+#define CDC_DEFAULT_OPTS 0xE0
 
 static uint16_t calculate_ref(uint32_t vout_mv);
 
@@ -48,8 +54,27 @@ void tps55289_initialize()
     // Set over current protection delay and keep other default
     // bit values in VOUT_SR_REG (see data sheet 7.6.3)
     Wire.write(VOUT_SR_REG);
-    Wire.write(OCP_DELAY_3MS);
+    Wire.write(OCP_DELAY_12MS);
     Wire.endTransmission();
+
+    delay(200);
+
+    // Try disabling OCP
+    Wire.beginTransmission(TPS55289_ADDR);
+    Wire.write(IOUT_LIMIT_REG);
+    Wire.write(OCP_DISABLE);
+    Wire.endTransmission();
+
+    delay(200);
+
+    //Default options for CDC register:
+    // No cable droop compensation, all internal faults unmasked
+    Wire.beginTransmission(TPS55289_ADDR);
+    Wire.write(CDC_REG);
+    Wire.write(CDC_DEFAULT_OPTS);
+    Wire.endTransmission();
+
+    delay(200);
 
     tps55289_set_vout(0);
     tps55289_disable_output(); // not working for some reason
@@ -60,9 +85,9 @@ bool tps55289_enable_output()
     Wire.beginTransmission(TPS55289_ADDR);
     Wire.write(MODE_REG);
     
-    // Sets output enable but also disables (writes 0) HICCUP mode.
+    // Sets output enable, FPWM mode for light loads, and enable hiccup on overcurrent
     // See datasheet 7.6.6
-    Wire.write(1 << OE_BIT);
+    Wire.write( (1 << OE_BIT) | (1 << FPWM_ENABLE_BIT) | (1 << HICCUP_EN_BIT) );
     Wire.endTransmission();
     return true;
 }
@@ -71,6 +96,7 @@ bool tps55289_disable_output()
 {
     Wire.beginTransmission(TPS55289_ADDR);
     Wire.write(MODE_REG);
+    // reset output and enable discharge mode to discharge output capacitors
     Wire.write( ~(1 << OE_BIT) | (1 << DSCHG_BIT) );
     Wire.endTransmission();
     return true;
@@ -81,8 +107,8 @@ bool tps55289_set_vout(uint16_t vout_set_mv)
     uint16_t ref_value = calculate_ref(vout_set_mv);
     Wire.beginTransmission(TPS55289_ADDR);
     Wire.write(REF_LSB_REG);
-    Wire.write(ref_value & 0x00ff);
-    Wire.write(ref_value >> 8);
+    Wire.write(ref_value & 0x00ff); // Write lower 8 bits of ref value
+    Wire.write(ref_value >> 8);     // then write upper 8 bits
     Wire.endTransmission();
     return true;
 }
@@ -114,23 +140,26 @@ void tps55289_status_report()
     Serial.println(status_str);
 
     if(status_bits == 0)
-        Serial.println("\tBoost mode");
+        Serial.println("Boost mode");
     else if(status_bits == 0x1)
-        Serial.println("\tBuck mode");
+        Serial.println("Buck mode");
     else if(status_bits == 0x2)
-        Serial.println("\tBuck-boost mode");
+        Serial.println("Buck-boost mode");
 
     if(ovp_bit)
-        Serial.println("\t OVP ON");
+        Serial.println("OVP ON");
     
     if(ocp_bit)
-        Serial.println("\tOCP ON");
+        Serial.println("OCP ON");
 
     if(scp_bit)
-        Serial.println("\tSCP ON");
+        Serial.println("SCP ON");
 
 }
 
+// Calculate reference value to program to REF reg
+// from a given value in mV
+// See datasheet 7.6.1
 static uint16_t calculate_ref(uint32_t vout_mv)
 {
     if (vout_mv < VOUT_MIN_MV)
