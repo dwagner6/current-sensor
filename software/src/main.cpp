@@ -10,26 +10,17 @@
 #include <pulser.h>
 #include <tps55289.h>
 #include <utils.h>
+#include "application.h"
 
 #define NUM_READINGS (uint8_t)50 // Number of ADC readings to average
 #define BAUD_RATE 115200
 #define DEBOUNCE_INTERVAL_MS 5
 #define INPUT_SIZE 30
 #define DELAY 1 // supposedly uS
-#define ADC_CONVERSIONS_PER_PIN 5
-#define ADC_READOUT_INTERVAL 5000
-#define CS_GAIN 20
-#define RES_MOHMS_1A 150
-#define RES_MOHMS_5A 30
-#define RES_MOHMS_10A 15
-#define RES_MOHMS_20A 7
 
 
-uint8_t adcPins[] = {PIN_ADC_1A, PIN_ADC_5A, \
-                    PIN_ADC_10A, PIN_ADC_20A};
-uint8_t adcPinCount = sizeof(adcPins) / sizeof(uint8_t);
-volatile bool adcConversionDone = false;
-adc_continuous_data_t *adcResult = NULL;
+
+
 
 volatile uint32_t pulseWidth = DEFAULT_PULSEWIDTH;
 volatile bool ledcEnabled = true;
@@ -55,11 +46,6 @@ uint64_t currentAdcReadout;
 void updatePulseWidth();
 void set_ledc_timer();
 void int_to_hex_str(uint8_t num_digits, uint32_t value, char * hex_string);
-uint32_t calculateCurrent(uint32_t voltage_mV, uint32_t gain, uint32_t resistor_mOhms);
-
-void ARDUINO_ISR_ATTR adcComplete() {
-  adcConversionDone = true;
-}
 
 void setup()
 {
@@ -67,62 +53,27 @@ void setup()
     pinMode(TIMER_PIN, OUTPUT);
     Serial.begin(BAUD_RATE);
 
-    // Set 12-bit ADC width
-    analogContinuousSetWidth(12);
-    // Set 11 dB atten -> 3.1V max reading
-    analogContinuousSetAtten(ADC_11db);
-    // Setup ADC Continuous with following input:
-    // array of pins, count of the pins, how many conversions 
-    // per pin in one cycle will happen, sampling frequency, callback function
-    analogContinuous(adcPins, adcPinCount, ADC_CONVERSIONS_PER_PIN, 20000, &adcComplete);
-    // Start conversions
-    analogContinuousStart();
+    
 
     pinMode(TPS55289_EN_PIN, OUTPUT);
     digitalWrite(TPS55289_EN_PIN, HIGH);
 
     tps55289_initialize();
-
+    adcSetup();
+    
     Serial.println("ESP32 Pulser setup passed!");
-
     Serial.println("\nAvailable commands:");
     Serial.println("\tfreq <Hz> \tset frequency");
     Serial.println("\twidth <ns> \tset pulse width");
     Serial.println("\tcurr <mA> \tset current");
     Serial.println("\tonoff <0/1> \tenable/disable output");
-    Serial.println("\tvout <mV> \tset compliance voltage");
-    Serial.println("\tstatus <0/1> \tread TPS status regs");
-    Serial.println("\tadc <0/1> \tdisplay adc raw readings");
     Serial.println("'<cmd> ?' to view current setting");
 }
 
 void loop()
 {
+    applicationWorker();
 
-    if (adcConversionDone == true) {
-        // Set ISR flag back to false
-        adcConversionDone = false;
-        // Read data from ADC
-        if (!analogContinuousRead(&adcResult, 0)) {
-            Serial.println("Error occurred during reading data. Set Core Debug Level to error or lower for more information.");
-        }
-    }
-
-    // Printout ADC readings every couple seconds
-    currentAdcReadout = millis();
-    if ( (currentAdcReadout - lastAdcReadout) > ADC_READOUT_INTERVAL)
-    {
-        for (int i = 0; i < adcPinCount; i++) {
-            Serial.printf("\nADC PIN %d data:", adcResult[i].pin);
-            Serial.printf("\n   Avg raw value = %d", adcResult[i].avg_read_raw);
-            Serial.printf("\n   Avg millivolts value = %d", adcResult[i].avg_read_mvolts);
-        }
-        Serial.printf("\n\r");
-        lastAdcReadout = currentAdcReadout;
-
-    }
-
-    // TODO: Main menu FSM
     byte size = Serial.readBytes(teststr, INPUT_SIZE);
     // Add the final 0 to end the C string
     teststr[size] = 0;
@@ -208,51 +159,28 @@ void loop()
         Serial.print("pulseWidth: ");
         Serial.println(pulseWidth);
 
+        uint16_t prevCurrent = current;
         current = reg[2];
-        if (current < 0)
-            current = 0;
         if (current > 20000U)
             current = 20000U;
         reg[2] = current;
         Serial.print("current: ");
         Serial.println(current);
+        if(prevCurrent != current)
+            setCurrent(current);
 
         if (!reg[3])
         {
             pulseWidth = 0;
-            tps55289_disable_output();
+            setCurrent(0);
         }
         else
-            tps55289_enable_output();
+            setCurrent(current);
+       
         Serial.print("onoff: ");
         Serial.println(reg[3]);
-
-        if (reg[4] > 15000U)
-            reg[4] = 15000U;
-        if (reg[4] < 0)
-            reg[4] = 0;
-        vout_mv = reg[4];
-        tps55289_set_vout(vout_mv);
-        Serial.print("vout_mv: ");
-        Serial.println(vout_mv);
-
-        if (reg[5])
-        {
-            tps55289_status_report();
-            reg[5] = 0;
-        }
         
-        if (reg[6])
-        {
-            for (int i = 0; i < adcPinCount; i++) {
-                Serial.printf("\nADC PIN %d data:", adcResult[i].pin);
-                Serial.printf("\n   Avg raw value = %d", adcResult[i].avg_read_raw);
-                Serial.printf("\n   Avg millivolts value = %d", adcResult[i].avg_read_mvolts);
-            }
-            Serial.printf("\n\r");
-        }
-
-        set_ledc_timer();   // set new ledc frequence
+        set_ledc_timer();   // set new ledc frequency
         updatePulseWidth(); // set new pulsewidth
     }
     
@@ -261,7 +189,6 @@ void loop()
 void updatePulseWidth()
 {
     uint64_t period_ns = (1000000000ULL / freq); // Period in nanoseconds
-    //uint64_t duty = (pulseWidth * UINT16_MAX) / (MAX_PULSE_WIDTH);
     uint64_t duty = (pulseWidth * UINT16_MAX) / period_ns;
     ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, duty);
     if (ledcEnabled)
@@ -291,15 +218,4 @@ void set_ledc_timer()
     attachInterrupt(PIN_PULSE_OUTPUT, &onFallingedge, FALLING); */
 }
 
-// Function to convert amplifier output voltage to measured current using integer arithmetic
-uint32_t calculateCurrent(uint32_t voltage_mV, uint32_t gain, uint32_t resistor_mOhms) {
-    // Calculate the numerator: voltage in microvolts (voltage_mV * 1000)
-    uint64_t voltage_uV = (uint64_t)voltage_mV * 1000;
-    // Calculate the denominator: gain * resistor in milliohms
-    uint64_t gain_resistor = (uint64_t)gain * resistor_mOhms;
-    // Calculate the current in microamperes (uA) to maintain precision
-    uint64_t current_uA = voltage_uV / gain_resistor;
-    // Convert current from microamperes to milliamperes
-    uint32_t current_mA = (uint32_t)(current_uA / 1000);
-    return current_mA;
-}
+

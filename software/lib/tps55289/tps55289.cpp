@@ -30,8 +30,8 @@
 #define OCP_DELAY_BIT 0x04
 #define OCP_DELAY_NONE 0x00
 #define OCP_DELAY_3MS 0x11
-#define OE_BIT 7
-#define DSCHG_BIT 4
+#define OE_BIT 7U
+#define DSCHG_BIT 4U
 #define VOUT_MIN_MV 800
 #define VOUT_MAX_MV 20000
 #define REF_MIN 0x0000 // Vout = 0.8V
