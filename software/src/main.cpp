@@ -5,6 +5,7 @@
 #include <Bounce2.h>
 #include <Wire.h>
 #include <esp32-hal-adc.h>
+#include <PID_v1.h>
 
 #include "pins.h"
 #include <pulser.h>
@@ -33,7 +34,6 @@ bool changed = false;
 uint32_t freq = DEFAULT_FREQ_HZ;
 uint16_t current = 0;
 uint16_t vout_mv = 0;
-char teststr[INPUT_SIZE + 1];
 int8_t i = -1;
 uint16_t reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
                     0, 0, 0, 0, 0};
@@ -74,7 +74,13 @@ void loop()
 {
     applicationWorker();
 
-    byte size = Serial.readBytes(teststr, INPUT_SIZE);
+    char teststr[INPUT_SIZE + 1];
+    byte size = 0;
+    if(Serial.available() > 0)
+    {
+        size = Serial.readBytes(teststr, INPUT_SIZE);
+    
+    } 
     // Add the final 0 to end the C string
     teststr[size] = 0;
 

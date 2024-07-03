@@ -7,6 +7,7 @@
 #include "application.h"
 #include "pins.h"
 #include "tps55289.h"
+#include <PID_v1.h>
 
 #define ADC_BIT_WIDTH   12
 #define ADC_ZERO_V_OFFSET   142     // Observed mV reading from ADC when measuring zero volts
@@ -19,6 +20,9 @@
 #define RES_UOHMS_20A 7500UL
 #define VCAP_STEP_MV    20U  // amount to step Vcap when trying to reach current set point
 #define CURRENT_SET_MARGIN_MA   50U      // Set point considered achieved if within +/-
+#define PRINTOUT_DELAY_MS 100
+#define PRINTOUT_EN 1
+#define STEP_DELAY_MS 50
 
 static uint8_t adcPins[] = {PIN_ADC_1A, PIN_ADC_5A, \
                     PIN_ADC_10A, PIN_ADC_20A};
@@ -35,6 +39,7 @@ enum current_set_state_t{OFF, TOO_LOW, TOO_HIGH, REACHED};
 current_set_state_t currentStateMachineState = OFF;
 
 bool readAdcData();
+void printCurrentData(uint32_t current_mV, uint16_t current);
 
 void ARDUINO_ISR_ATTR adcComplete() {
   adcConversionDone = true;
@@ -55,14 +60,17 @@ void adcSetup()
     analogContinuousStart();
 }
 
+// State machine that attempts to get output current to match set point current
+// Call once per main loop (see applicationWorker() )
+
 void currentStateMachine()
 {
     static uint16_t vcap_set = 800;     // Vcap output set point
-    uint16_t current = 0;        // calculated current value
+    static uint16_t current;        // calculated current value
     // mV reading from ADC of current sensor output
-    uint32_t current_mV;
+    static uint32_t current_mV;
 
-    // If new ADC data is ready
+    // If new ADC data is ready, do a new reading
     if(readAdcData())
     {
         // record adc mv value from selected current sensor
@@ -70,22 +78,9 @@ void currentStateMachine()
         current = calculateCurrent(current_mV, CS_GAIN, resistance);
     }
 
-    static uint32_t now = 0;
-    static uint32_t prev;
-    now = millis();
-    if((now - prev) > 1000)
-    {
-        Serial.printf("ADC: \t%d mV\n\r", current_mV);
-        Serial.printf("Current: %d mA\n\r", current);
-        Serial.printf("state = %d\n\r", currentStateMachineState);
-        Serial.printf("currentRange = %d\n\r", currentRange);
-        Serial.printf("currentSetPoint = %d\n\r", currentSetPoint);
-        Serial.printf("\n\r");
-        prev = now;
-    }
-
     switch(currentStateMachineState)
     {
+        // State: Output off, current through circuit is zero
         case OFF: 
             if(currentSetPoint > 0)
             {
@@ -93,15 +88,20 @@ void currentStateMachine()
                 tps55289_enable_output();
             }
             break;
+        // State: output on, current through circuit is below set point
         case TOO_LOW:
+            // If current set point changes to zero
             if(currentSetPoint == 0)
             {
+                // Next state will be OFF
                 currentStateMachineState = OFF;
+                // Set output voltage to zero
                 tps55289_set_vout(0);
+                // Turn off output (discharging capacitors)
                 tps55289_disable_output();
                 break;
             }
-            // Check if current hasn't gone too high
+            // Check if current hasn't gone above set point
             else if( (current > currentSetPoint + CURRENT_SET_MARGIN_MA) )
             {
                 currentStateMachineState = TOO_HIGH;
@@ -116,11 +116,15 @@ void currentStateMachine()
             }
             else
             {
+                // Step up capacitor voltage (increase current)
                 vcap_set += VCAP_STEP_MV;
+                // Set new output voltage
                 tps55289_set_vout(vcap_set);
+                printCurrentData(current_mV, current);
+                delay(STEP_DELAY_MS);
                 break;
             }
-        
+        // State: output on, current through circuit is above set point
         case TOO_HIGH:
             if(currentSetPoint == 0)
             {
@@ -146,6 +150,8 @@ void currentStateMachine()
             {
                 vcap_set -= VCAP_STEP_MV;
                 tps55289_set_vout(vcap_set);
+                printCurrentData(current_mV, current);
+                delay(STEP_DELAY_MS);
                 break;
             }
 
@@ -168,12 +174,14 @@ void currentStateMachine()
                 currentStateMachineState = TOO_LOW;
                 break;
             }
+            // Do nothing if output current within margin of set point
             else
                 break;
 
     }
 }
 
+// Application state machine worker.  Call once per main loop.
 void applicationWorker()
 {
     currentStateMachine();
@@ -189,6 +197,19 @@ bool readAdcData()
         return false;
 }
 
+void printCurrentData(uint32_t current_mV, uint16_t current)
+{
+    static uint32_t now;
+    now = millis();
+    static uint32_t prev;
+    if( ((now - prev) > PRINTOUT_DELAY_MS) && PRINTOUT_EN )
+    {
+        Serial.printf("ADC: \t%d mV\n\r", current_mV);
+        Serial.printf("Current: %d mA\n\r", current);
+        Serial.printf("\n\r");
+        prev = now;
+    }
+}
 void setCurrent(uint16_t current_mA)
 {
     currentSetPoint = current_mA;
@@ -217,7 +238,7 @@ void setCurrent(uint16_t current_mA)
     }
 }
 
-// Function to convert amplifier output voltage to measured current using integer arithmetic
+// Function to convert sensor output voltage to measured current using integer arithmetic
 uint32_t calculateCurrent(uint32_t voltage_mV, uint32_t gain, uint32_t resistor_uOhms) 
 {
     // Convert the voltage from millivolts to microvolts

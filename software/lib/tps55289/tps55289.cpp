@@ -71,7 +71,7 @@ bool tps55289_disable_output()
 {
     Wire.beginTransmission(TPS55289_ADDR);
     Wire.write(MODE_REG);
-    Wire.write( ~(1 << OE_BIT) | (1 << DSCHG_BIT) );
+    Wire.write( ~(1U << OE_BIT) | (1U << DSCHG_BIT) );
     Wire.endTransmission();
     return true;
 }
@@ -144,8 +144,8 @@ static uint16_t calculate_ref(uint32_t vout_mv)
     uint32_t ref_value = ((vout_mv - VOUT_MIN_MV) * REF_MAX) / (VOUT_MAX_MV - VOUT_MIN_MV);
     char ref_str[4];
     int_to_hex_str(4, ref_value, ref_str);
-    Serial.print("ref_value: 0x");
-    Serial.print(ref_str);
+    //Serial.print("ref_value: 0x");
+    //Serial.print(ref_str);
 
     return (uint16_t)ref_value;
 }
