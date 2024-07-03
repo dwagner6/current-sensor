@@ -30,8 +30,8 @@
 #define OCP_DELAY_BIT 0x04
 #define OCP_DELAY_NONE 0x00
 #define OCP_DELAY_3MS 0x11
-#define OE_BIT 7U
-#define DSCHG_BIT 4U
+#define OE_BIT 7
+#define DSCHG_BIT 4
 #define VOUT_MIN_MV 800
 #define VOUT_MAX_MV 20000
 #define REF_MIN 0x0000 // Vout = 0.8V
@@ -71,7 +71,7 @@ bool tps55289_disable_output()
 {
     Wire.beginTransmission(TPS55289_ADDR);
     Wire.write(MODE_REG);
-    Wire.write( ~(1U << OE_BIT) | (1U << DSCHG_BIT) );
+    Wire.write((uint8_t) ~(1 << OE_BIT) | (1 << DSCHG_BIT) );
     Wire.endTransmission();
     return true;
 }
