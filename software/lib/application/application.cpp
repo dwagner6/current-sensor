@@ -24,14 +24,18 @@
 #define PRINTOUT_EN 1
 #define STEP_DELAY_MS 50
 
+
+uint32_t current_mA[4];
+const uint32_t resistances[]= {RES_UOHMS_1A, RES_UOHMS_5A, \
+                            RES_UOHMS_10A, RES_UOHMS_20A};
 static uint8_t adcPins[] = {PIN_ADC_1A, PIN_ADC_5A, \
                     PIN_ADC_10A, PIN_ADC_20A};
 static uint8_t adcPinCount = sizeof(adcPins) / sizeof(uint8_t);
 adc_continuous_data_t *adcResult = NULL;
 static bool adcConversionDone = false;
 
-enum current_range_t{CURRENT_1A, CURRENT_5A, CURRENT_10A, CURRENT_20A};
-static current_range_t currentRange = CURRENT_1A;
+
+current_range_t currentRange = CURRENT_1A;
 static uint16_t currentSetPoint = 0;
 static uint32_t resistance = RES_UOHMS_1A;
 
@@ -184,7 +188,19 @@ void currentStateMachine()
 // Application state machine worker.  Call once per main loop.
 void applicationWorker()
 {
-    currentStateMachine();
+    //currentStateMachine();
+
+    static uint32_t current_mV[4];
+
+    // Take ADC readings
+    if(readAdcData())
+    {
+        for(uint8_t i = 0; i < 4; i++)
+        {
+            current_mV[i] = adcResult[i].avg_read_mvolts;
+            current_mA[i] = calculateCurrent(current_mV[i], CS_GAIN, resistances[i]);
+        }
+    }
 }
 
 bool readAdcData()
