@@ -153,8 +153,6 @@ void loop()
         if (freq > DEFAULT_MAX_FREQ)
             freq = DEFAULT_MAX_FREQ;
         reg[0] = freq;
-        Serial.print("freq: ");
-        Serial.println(freq);
 
         pulseWidth = reg[1];
         if (pulseWidth < DEFAULT_MIN_PULSEWIDTH)
@@ -162,16 +160,13 @@ void loop()
         if (pulseWidth > DEFAULT_MAX_PULSEWIDTH)
             pulseWidth = DEFAULT_MAX_PULSEWIDTH;
         reg[1] = pulseWidth;
-        Serial.print("pulseWidth: ");
-        Serial.println(pulseWidth);
 
         uint16_t prevCurrent = current;
         current = reg[2];
         if (current > 20000U)
             current = 20000U;
         reg[2] = current;
-        Serial.print("current: ");
-        Serial.println(current);
+
         if(prevCurrent != current)
             setCurrent(current);
 
@@ -183,9 +178,6 @@ void loop()
         else
             setCurrent(current);
        
-        Serial.print("onoff: ");
-        Serial.println(reg[3]);
-        
         set_ledc_timer();   // set new ledc frequency
         updatePulseWidth(); // set new pulsewidth
     }
