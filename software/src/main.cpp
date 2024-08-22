@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <soc/ledc_reg.h>
 #include <driver/ledc.h>
 #include <stdint.h> // Include stdint.h for fixed-width data types
 #include <Bounce2.h>
@@ -20,11 +19,17 @@
 #define DELAY 1 // supposedly uS
 #define VOUT_MV_MIN 800  // Min and max Vout on TPS55289 in mV
 #define VOUT_MV_MAX 15000
+#define LEDC_CHAN 0
+
 
 volatile uint32_t pulseWidth = DEFAULT_PULSEWIDTH;
 volatile bool ledcEnabled = true;
 volatile bool transmitReading = false;
 volatile bool flipbit = false;
+enum {FREQ_SET, WIDTH_SET, CURR_SET, ONOFF_SET, \
+                VOUT_SET, STATUS_SET, ADC_SET};
+
+esp_err_t error = ESP_OK;
 
 hw_timer_t *timer = NULL;
 volatile bool timerEnabled = false;
@@ -34,8 +39,8 @@ uint8_t adc_chan = 0;
 uint16_t vout = 0;
 uint16_t current = 0;
 uint16_t vout_mv = 0;
-int8_t i = -1;
-uint16_t reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
+int8_t setting = -1;
+uint16_t setting_reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
                     0, 0, 0, 0, 0};
 extern current_range_t currentRange;
 extern uint32_t current_mA[4];
@@ -51,11 +56,11 @@ void int_to_hex_str(uint8_t num_digits, uint32_t value, char * hex_string);
 
 void setup()
 {
-    pinMode(PIN_PULSE_OUTPUT, OUTPUT);
+    //pinMode(PIN_PULSE_OUTPUT, OUTPUT);
     pinMode(TIMER_PIN, OUTPUT);
     Serial.begin(BAUD_RATE);
 
-    
+    ledcAttach(PIN_PULSE_OUTPUT, DEFAULT_FREQ_HZ, 16);    
 
     pinMode(TPS55289_EN_PIN, OUTPUT);
     digitalWrite(TPS55289_EN_PIN, HIGH);
@@ -95,35 +100,36 @@ void loop()
 
         tokens = token;
         tokens.trim();
+        
 
-        i = 99;
+        setting = 99;
         if (tokens.equals("freq"))
         {
-            i = 1;
+            setting = FREQ_SET;
         }
         else if (tokens.equals("width"))
         {
-            i = 2;
+           setting = WIDTH_SET; 
         }
         else if (tokens.equals("curr"))
         {
-            i = 3;
+            setting = CURR_SET;
         }
         else if (tokens.equals("onoff"))
         {
-            i = 4;
+            setting = ONOFF_SET; 
         }
         else if (tokens.equals("vout"))
         {
-            i = 5;
+            setting = VOUT_SET;
         }
         else if (tokens.equals("status"))
         {
-            i = 6;
+            setting = STATUS_SET;
         }
         else if (tokens.equals("adc"))
         {
-            i = 7;
+            setting = ADC_SET;
         }
         else
             Serial.println("Error!");
@@ -134,11 +140,11 @@ void loop()
         if (tokens.length() > 0)
         {
             if (tokens.equals("?"))
-                Serial.println(reg[i - 1]);
+                Serial.println(setting_reg[setting]);
             else
             {
                 num = tokens.toInt();
-                reg[i - 1] = num;
+                setting_reg[setting] = num;
                 Serial.println("OK");
                 changed = true;
             }
@@ -149,30 +155,30 @@ void loop()
     {
         changed = false;
 
-        freq = reg[0];
+        freq = setting_reg[FREQ_SET];
         if (freq < DEFAULT_MIN_FREQ)
             freq = DEFAULT_MIN_FREQ;
         if (freq > DEFAULT_MAX_FREQ)
             freq = DEFAULT_MAX_FREQ;
-        reg[0] = freq;
+        setting_reg[FREQ_SET] = freq;
 
-        pulseWidth = reg[1];
+        pulseWidth = setting_reg[WIDTH_SET];
         if (pulseWidth < DEFAULT_MIN_PULSEWIDTH)
             pulseWidth = DEFAULT_MIN_PULSEWIDTH;
         if (pulseWidth > DEFAULT_MAX_PULSEWIDTH)
             pulseWidth = DEFAULT_MAX_PULSEWIDTH;
-        reg[1] = pulseWidth;
+        setting_reg[WIDTH_SET] = pulseWidth;
 
         uint16_t prevCurrent = current;
-        current = reg[2];
+        current = setting_reg[CURR_SET];
         if (current > 20000U)
             current = 20000U;
-        reg[2] = current;
+        setting_reg[CURR_SET] = current;
 
         if(prevCurrent != current)
             setCurrent(current);
 
-        if (!reg[3])
+        if (!setting_reg[ONOFF_SET])
         {
             pulseWidth = 0;
             tps55289_disable_output();
@@ -184,7 +190,7 @@ void loop()
             tps55289_enable_output();
         }
        
-        vout = reg[4];
+        vout = setting_reg[VOUT_SET];
         if(vout < VOUT_MV_MIN)
         {
             vout = VOUT_MV_MIN;
@@ -195,8 +201,9 @@ void loop()
         }
         tps55289_set_vout(vout);
 
-        adc_chan = reg[6];
-        Serial.println(current_mA[adc_chan], DEC);
+        //adc_chan = setting_reg[ADC_SET];
+
+        //Serial.println(current_mA[adc_chan], DEC);
 
 
         set_ledc_timer();   // set new ledc frequency
@@ -209,9 +216,16 @@ void updatePulseWidth()
 {
     uint64_t period_ns = (1000000000ULL / freq); // Period in nanoseconds
     uint64_t duty = (pulseWidth * UINT16_MAX) / period_ns;
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, duty);
+    error = ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, duty);
+    if(error != ESP_OK)
+        Serial.println("ledc_set_duty parameter error!");
+
     if (ledcEnabled)
-        ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
+    {
+        error = ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
+        if(error != ESP_OK)
+            Serial.println("ledc_update_duty parameter error!");
+    }
 }
 
 void set_ledc_timer()
@@ -222,7 +236,9 @@ void set_ledc_timer()
         .duty_resolution = LEDC_TIMER_16_BIT, // 16-bit duty resolution
         .timer_num = LEDC_TIMER_0,
         .freq_hz = freq};
-    ledc_timer_config(&ledc_timer);
+    error = ledc_timer_config(&ledc_timer);
+    if (error != ESP_OK)
+        Serial.println("ledc_timer_config error!");
 
     // Configure LEDC channel with a fixed duty cycle (e.g., 50%) for a 1ms period
     static ledc_channel_config_t ledc_channel;
