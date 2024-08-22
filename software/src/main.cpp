@@ -44,8 +44,6 @@ uint16_t setting_reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
                     0, 0, 0, 0, 0};
 extern current_range_t currentRange;
 extern uint32_t current_mA[4];
-uint16_t num = 666;
-String outputstring;
 
 uint64_t lastAdcReadout = 0;
 uint64_t currentAdcReadout;
@@ -81,74 +79,81 @@ void loop()
 {
     applicationWorker();
 
-    char teststr[INPUT_SIZE + 1];
-    byte size = 0;
+    char input_str[INPUT_SIZE];
+    uint8_t size = 0;
     if(Serial.available() > 0)
     {
-        size = Serial.readBytes(teststr, INPUT_SIZE);
+        size = Serial.readBytes(input_str, INPUT_SIZE);
     
     } 
-    // Add the final 0 to end the C string
-    teststr[size] = 0;
 
-    outputstring = teststr;
-    String tokens = "";
     if (size != 0)
     {
-        //    remove any \r \n whitespace at the end of the String
-        char *token = strtok(teststr, "     ");
+        // Variables to hold the command and command value from UART string
+        char command[10];
+        uint16_t value;
+        bool valid_command = true;
 
-        tokens = token;
-        tokens.trim();
-        
+        // Attempt to parse UART string, return number of matches
+        int8_t matches = sscanf(input_str, "%s %d", &command, &value);
 
-        setting = 99;
-        if (tokens.equals("freq"))
+        // Convert command to a String to make comparisons easier
+        String command_str(command);
+        Serial.printf("sscanf result: %s %d\n\r", command_str, value);
+
+        if (command_str.equals("freq"))
         {
             setting = FREQ_SET;
         }
-        else if (tokens.equals("width"))
+        else if (command_str.equals("width"))
         {
-           setting = WIDTH_SET; 
+            setting = WIDTH_SET; 
         }
-        else if (tokens.equals("curr"))
+        else if (command_str.equals("curr"))
         {
             setting = CURR_SET;
         }
-        else if (tokens.equals("onoff"))
+        else if (command_str.equals("onoff"))
         {
             setting = ONOFF_SET; 
         }
-        else if (tokens.equals("vout"))
+        else if (command_str.equals("vout"))
         {
             setting = VOUT_SET;
         }
-        else if (tokens.equals("status"))
+        else if (command_str.equals("status"))
         {
             setting = STATUS_SET;
         }
-        else if (tokens.equals("adc"))
+        else if (command_str.equals("adc"))
         {
             setting = ADC_SET;
         }
         else
+        {
+            Serial.println("Error: no matching command!");
+            valid_command = false;
+        }
+
+        // If we had two matches, we are changing a setting, so raise the changed flag
+        // and put the value into the register for that setting
+        if (matches == 2 && valid_command)
+        {
+            Serial.println("OK");
+            setting_reg[setting] = value;
+            changed = true;
+        }
+        
+        // If only one match, presumably string was "command ?",
+        // so print the current value of that setting
+        else if (matches == 1 && valid_command)
+        {
+            Serial.println("OK");
+            Serial.println(setting_reg[setting]);
+        }
+        else
             Serial.println("Error!");
 
-        token = strtok(NULL, "     ");
-        tokens = token;
-        tokens.trim();
-        if (tokens.length() > 0)
-        {
-            if (tokens.equals("?"))
-                Serial.println(setting_reg[setting]);
-            else
-            {
-                num = tokens.toInt();
-                setting_reg[setting] = num;
-                Serial.println("OK");
-                changed = true;
-            }
-        }
     }
 
     if (changed)
