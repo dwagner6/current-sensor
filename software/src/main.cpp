@@ -20,6 +20,11 @@
 #define VOUT_MV_MIN 800  // Min and max Vout on TPS55289 in mV
 #define VOUT_MV_MAX 15000
 #define LEDC_CHAN 0
+// Maximum bit resolution of LEDC timers (used for setting freq, duty)
+#define LEDC_BIT_RESOLUTION 14
+// Calculate max value of whatever LEDC bit width is chosen (used for
+// calculating duty)
+#define LEDC_BITWIDTH_MAX_VAL (UINT16_MAX >> (16U-LEDC_BIT_RESOLUTION))
 
 
 volatile uint32_t pulseWidth = DEFAULT_PULSEWIDTH;
@@ -40,16 +45,15 @@ uint16_t vout = 0;
 uint16_t current = 0;
 uint16_t vout_mv = 0;
 int8_t setting = -1;
-uint16_t setting_reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
-                    0, 0, 0, 0, 0};
+uint32_t setting_reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
+                            0, 0, 0, 0, 0};
 extern current_range_t currentRange;
 extern uint32_t current_mA[4];
 
 uint64_t lastAdcReadout = 0;
 uint64_t currentAdcReadout;
 
-void updatePulseWidth();
-void set_ledc_timer();
+uint32_t calculateDuty(uint32_t freq, uint32_t pulseWidth_ns);
 void int_to_hex_str(uint8_t num_digits, uint32_t value, char * hex_string);
 
 void setup()
@@ -58,26 +62,23 @@ void setup()
     pinMode(TIMER_PIN, OUTPUT);
     Serial.begin(BAUD_RATE);
 
-    ledcAttach(PIN_PULSE_OUTPUT, DEFAULT_FREQ_HZ, 16);    
+    if(!ledcAttach(PIN_PULSE_OUTPUT, DEFAULT_FREQ_HZ, LEDC_BIT_RESOLUTION))
+    {
+        Serial.println("ledc peripheral config error!");
+        while(1){}
+    };    
 
     pinMode(TPS55289_EN_PIN, OUTPUT);
     digitalWrite(TPS55289_EN_PIN, HIGH);
 
     tps55289_initialize();
     adcSetup();
-    
-/*     Serial.println("ESP32 Pulser setup passed!");
-    Serial.println("\nAvailable commands:");
-    Serial.println("\tfreq <Hz> \tset frequency");
-    Serial.println("\twidth <ns> \tset pulse width");
-    Serial.println("\tvout <mV> \tset capacitor output voltage");
-    Serial.println("\tonoff <0/1> \tenable/disable output");
-    Serial.println("'<cmd> ?' to view current setting"); */
+   
 }
 
 void loop()
 {
-    applicationWorker();
+    //applicationWorker();
 
     char input_str[INPUT_SIZE];
     uint8_t size = 0;
@@ -93,7 +94,6 @@ void loop()
         char command[10];
         uint16_t value;
         bool valid_command = true;
-
         // Attempt to parse UART string, return number of matches
         int8_t matches = sscanf(input_str, "%s %d", &command, &value);
 
@@ -207,57 +207,27 @@ void loop()
         tps55289_set_vout(vout);
 
         //adc_chan = setting_reg[ADC_SET];
-
         //Serial.println(current_mA[adc_chan], DEC);
 
+        // Change pulse output frequency to freq, actual frequency after
+        // calculation at bit resolution stored in frequency
+        uint32_t frequency;
+        frequency = ledcChangeFrequency(PIN_PULSE_OUTPUT, freq, LEDC_BIT_RESOLUTION);
+        // DEBUG
+        // Serial.printf("ledc frequency: %d\n\r", frequency);
 
-        set_ledc_timer();   // set new ledc frequency
-        updatePulseWidth(); // set new pulsewidth
+        // Calculate duty cycle based on current frequency and pulse width
+        uint32_t duty = calculateDuty(frequency, pulseWidth);
+        ledcWrite(PIN_PULSE_OUTPUT, duty);
+        // DEBUG
+        // Serial.printf("Calculated duty: %d\n\r", duty);
     }
     
 }
 
-void updatePulseWidth()
+uint32_t calculateDuty(uint32_t freq, uint32_t pulseWidth_ns)
 {
-    uint64_t period_ns = (1000000000ULL / freq); // Period in nanoseconds
-    uint64_t duty = (pulseWidth * UINT16_MAX) / period_ns;
-    error = ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, duty);
-    if(error != ESP_OK)
-        Serial.println("ledc_set_duty parameter error!");
-
-    if (ledcEnabled)
-    {
-        error = ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-        if(error != ESP_OK)
-            Serial.println("ledc_update_duty parameter error!");
-    }
+    uint64_t period_ns = (1000000000ULL / (uint64_t) freq); 
+    uint64_t duty = ((uint64_t) pulseWidth_ns * (LEDC_BITWIDTH_MAX_VAL) )/ period_ns;
+    return (uint32_t) duty;
 }
-
-void set_ledc_timer()
-{
-    static ledc_timer_config_t ledc_timer;
-    ledc_timer = {
-        .speed_mode = LEDC_HIGH_SPEED_MODE,
-        .duty_resolution = LEDC_TIMER_16_BIT, // 16-bit duty resolution
-        .timer_num = LEDC_TIMER_0,
-        .freq_hz = freq};
-    error = ledc_timer_config(&ledc_timer);
-    if (error != ESP_OK)
-        Serial.println("ledc_timer_config error!");
-
-    // Configure LEDC channel with a fixed duty cycle (e.g., 50%) for a 1ms period
-    static ledc_channel_config_t ledc_channel;
-    ledc_channel = {
-        .gpio_num = PIN_PULSE_OUTPUT,
-        .speed_mode = LEDC_HIGH_SPEED_MODE,
-        .channel = LEDC_CHANNEL_0,
-        .timer_sel = LEDC_TIMER_0,
-        .duty = 0};
-    ledc_channel_config(&ledc_channel);
-    updatePulseWidth();
-
-    /* // Attach an interrupt to the rising edge of the LEDC signal
-    attachInterrupt(PIN_PULSE_OUTPUT, &onFallingedge, FALLING); */
-}
-
-
