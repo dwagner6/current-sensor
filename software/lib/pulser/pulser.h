@@ -18,8 +18,9 @@
 #define DEFAULT_MAX_PULSEWIDTH 1000000U
 #define DEFAULT_MIN_PULSEWIDTH 500U
 #define DEFAULT_FREQ_HZ 1000U
-#define DEFAULT_MAX_FREQ 10000U
-#define DEFAULT_MIN_FREQ 100U
+// TODO: Fix ESP32 ledc functions to accomodate greater frequency resolution
+#define DEFAULT_MAX_FREQ 4000U
+#define DEFAULT_MIN_FREQ 1000U
 
 bool initialize_pulser();
 bool enable_pulser();
