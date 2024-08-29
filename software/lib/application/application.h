@@ -10,8 +10,9 @@
 
 typedef enum current_range_t{CURRENT_1A, CURRENT_5A, CURRENT_10A, CURRENT_20A} current_range_t;
 void adcSetup();
-void setCurrent(uint16_t current_mA);
+void setCurrentRange(uint16_t current_mA);
 uint32_t calculateCurrent(uint32_t voltage_mV, uint32_t gain, uint32_t resistor_uOhms);
+void applicationSetup();
 void applicationWorker();
 
 #endif

@@ -21,3 +21,7 @@ Commands take the the form of a string in the format `<command> <parameter>` whe
 - Set 1 us pulse width (0.1%): `width 1000` 
 - Turn on output: `onoff 1` 
 - Get measured pulse current from 10 A range: `adc 2` 
+
+## Debug mode
+To slow down the UART timeout to be able to send commands manually on the keyboard,
+add the line `#define DEBUG_ON` to `main.cpp`

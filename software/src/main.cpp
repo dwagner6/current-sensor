@@ -20,11 +20,17 @@
 #define VOUT_MV_MIN 800  // Min and max Vout on TPS55289 in mV
 #define VOUT_MV_MAX 15000
 #define LEDC_CHAN 0
+
+// TODO: Find minimum timeout necessary for Labview to send commands
+// in order to speed up main loop
+#define SERIAL_TIMEOUT_MS 200 // Timeout when waiting for serial data
+
 // Maximum bit resolution of LEDC timers (used for setting freq, duty)
 #define LEDC_BIT_RESOLUTION 14
 // Calculate max value of whatever LEDC bit width is chosen (used for
 // calculating duty)
 #define LEDC_BITWIDTH_MAX_VAL (UINT16_MAX >> (16U-LEDC_BIT_RESOLUTION))
+//#define DEBUG_ON
 
 
 volatile uint32_t pulseWidth = DEFAULT_PULSEWIDTH;
@@ -38,14 +44,14 @@ esp_err_t error = ESP_OK;
 
 hw_timer_t *timer = NULL;
 volatile bool timerEnabled = false;
-bool changed = false;
+bool settings_changed = false;
 uint32_t freq = DEFAULT_FREQ_HZ;
 uint8_t adc_chan = 0;
 uint16_t vout = 0;
 uint16_t current = 0;
 uint16_t vout_mv = 0;
 int8_t setting = -1;
-uint32_t setting_reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
+uint32_t settings_reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
                             0, 0, 0, 0, 0};
 extern current_range_t currentRange;
 extern uint32_t current_mA[4];
@@ -58,10 +64,13 @@ void int_to_hex_str(uint8_t num_digits, uint32_t value, char * hex_string);
 
 void setup()
 {
-    //pinMode(PIN_PULSE_OUTPUT, OUTPUT);
     pinMode(TIMER_PIN, OUTPUT);
     Serial.begin(BAUD_RATE);
 
+// Shorter timeout when not manually sending commands/debugging
+#ifndef DEBUG_ON
+    Serial.setTimeout(SERIAL_TIMEOUT_MS);
+#endif
     if(!ledcAttach(PIN_PULSE_OUTPUT, DEFAULT_FREQ_HZ, LEDC_BIT_RESOLUTION))
     {
         Serial.println("ledc peripheral config error!");
@@ -71,14 +80,17 @@ void setup()
     pinMode(TPS55289_EN_PIN, OUTPUT);
     digitalWrite(TPS55289_EN_PIN, HIGH);
 
-    tps55289_initialize();
-    adcSetup();
-   
+    applicationSetup();
 }
 
 void loop()
 {
-    //applicationWorker();
+    // Variables to hold the command and command value from UART string
+    char command[10];
+    char value[10];
+    bool valid_command = true;
+
+    applicationWorker();
 
     char input_str[INPUT_SIZE];
     uint8_t size = 0;
@@ -90,16 +102,15 @@ void loop()
 
     if (size != 0)
     {
-        // Variables to hold the command and command value from UART string
-        char command[10];
-        uint16_t value;
-        bool valid_command = true;
-        // Attempt to parse UART string, return number of matches
-        int8_t matches = sscanf(input_str, "%s %d", &command, &value);
+        // Scan string for command (ie: string followed by number, 
+        // seperated by a space) 
+        int8_t matches = sscanf(input_str, "%s %s", &command, &value);
 
-        // Convert command to a String to make comparisons easier
+        // Convert to Arduino String to make things easier
         String command_str(command);
-        Serial.printf("sscanf result: %s %d\n\r", command_str, value);
+        String value_str(value);
+        uint16_t value_int = value_str.toInt();
+        //Serial.printf("sscanf result: %s %s %d\n\r", command_str, value_str, value_int);
 
         if (command_str.equals("freq"))
         {
@@ -128,6 +139,12 @@ void loop()
         else if (command_str.equals("adc"))
         {
             setting = ADC_SET;
+            if(value_int > 3)
+            {
+                // Default to adc chan 3 if invalid channel value
+                value_int = 3;
+            }
+            adc_chan = (uint8_t) value_int;
         }
         else
         {
@@ -135,55 +152,60 @@ void loop()
             valid_command = false;
         }
 
-        // If we had two matches, we are changing a setting, so raise the changed flag
-        // and put the value into the register for that setting
-        if (matches == 2 && valid_command)
+        // If we're not reading a setting's value, update setting register
+        if ( valid_command && !value_str.startsWith("?"))
         {
             Serial.println("OK");
-            setting_reg[setting] = value;
-            changed = true;
+            settings_reg[setting] = value_int;
+            settings_changed = true;
         }
         
-        // If only one match, presumably string was "command ?",
-        // so print the current value of that setting
-        else if (matches == 1 && valid_command)
+        // Else if we're reading a setting's value, print it
+        else if (valid_command && value_str.equals("?"))
         {
             Serial.println("OK");
-            Serial.println(setting_reg[setting]);
+            Serial.println(settings_reg[setting]);
         }
+        // Anything else is an error
         else
             Serial.println("Error!");
 
+        // Special case: adc command only prints the most recent adc channel value
+        if(command_str.equals("adc"))
+        {
+            Serial.printf("%d\n\r", current_mA[adc_chan]);
+        }
+
     }
 
-    if (changed)
+    if (settings_changed)
     {
-        changed = false;
+        settings_changed = false;
 
-        freq = setting_reg[FREQ_SET];
+        freq = settings_reg[FREQ_SET];
         if (freq < DEFAULT_MIN_FREQ)
             freq = DEFAULT_MIN_FREQ;
         if (freq > DEFAULT_MAX_FREQ)
             freq = DEFAULT_MAX_FREQ;
-        setting_reg[FREQ_SET] = freq;
+        settings_reg[FREQ_SET] = freq;
 
-        pulseWidth = setting_reg[WIDTH_SET];
+        pulseWidth = settings_reg[WIDTH_SET];
         if (pulseWidth < DEFAULT_MIN_PULSEWIDTH)
             pulseWidth = DEFAULT_MIN_PULSEWIDTH;
         if (pulseWidth > DEFAULT_MAX_PULSEWIDTH)
             pulseWidth = DEFAULT_MAX_PULSEWIDTH;
-        setting_reg[WIDTH_SET] = pulseWidth;
+        settings_reg[WIDTH_SET] = pulseWidth;
 
         uint16_t prevCurrent = current;
-        current = setting_reg[CURR_SET];
+        current = settings_reg[CURR_SET];
         if (current > 20000U)
             current = 20000U;
-        setting_reg[CURR_SET] = current;
+        settings_reg[CURR_SET] = current;
 
         if(prevCurrent != current)
-            setCurrent(current);
+            setCurrentRange(current);
 
-        if (!setting_reg[ONOFF_SET])
+        if (!settings_reg[ONOFF_SET])
         {
             pulseWidth = 0;
             tps55289_disable_output();
@@ -195,7 +217,7 @@ void loop()
             tps55289_enable_output();
         }
        
-        vout = setting_reg[VOUT_SET];
+        vout = settings_reg[VOUT_SET];
         if(vout < VOUT_MV_MIN)
         {
             vout = VOUT_MV_MIN;
@@ -206,7 +228,7 @@ void loop()
         }
         tps55289_set_vout(vout);
 
-        //adc_chan = setting_reg[ADC_SET];
+        //adc_chan = settings_reg[ADC_SET];
         //Serial.println(current_mA[adc_chan], DEC);
 
         // Change pulse output frequency to freq, actual frequency after

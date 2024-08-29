@@ -42,11 +42,19 @@ static uint32_t resistance = RES_UOHMS_1A;
 enum current_set_state_t{OFF, TOO_LOW, TOO_HIGH, REACHED};
 current_set_state_t currentStateMachineState = OFF;
 
-bool readAdcData();
+bool getRawAdc();
 void printCurrentData(uint32_t current_mV, uint16_t current);
 
 void ARDUINO_ISR_ATTR adcComplete() {
   adcConversionDone = true;
+}
+
+
+void applicationSetup()
+{
+    tps55289_initialize();
+    adcSetup();
+    Serial.printf("Application setup passed!\n\r");
 }
 
 
@@ -75,7 +83,7 @@ void currentStateMachine()
     static uint32_t current_mV;
 
     // If new ADC data is ready, do a new reading
-    if(readAdcData())
+    if(getRawAdc())
     {
         // record adc mv value from selected current sensor
         current_mV = adcResult[currentRange].avg_read_mvolts;
@@ -186,6 +194,7 @@ void currentStateMachine()
 }
 
 // Application state machine worker.  Call once per main loop.
+// TODO: More functionality than just updating ADC values
 void applicationWorker()
 {
     //currentStateMachine();
@@ -193,7 +202,7 @@ void applicationWorker()
     static uint32_t current_mV[4];
 
     // Take ADC readings
-    if(readAdcData())
+    if(getRawAdc())
     {
         for(uint8_t i = 0; i < 4; i++)
         {
@@ -203,7 +212,8 @@ void applicationWorker()
     }
 }
 
-bool readAdcData()
+// TODO: add function arguments (not global variable)
+bool getRawAdc()
 {
     if(analogContinuousRead(&adcResult, 0))
     {
@@ -213,6 +223,7 @@ bool readAdcData()
         return false;
 }
 
+// Debug function: print out ADC data in mV and mA
 void printCurrentData(uint32_t current_mV, uint16_t current)
 {
     static uint32_t now;
@@ -226,7 +237,7 @@ void printCurrentData(uint32_t current_mV, uint16_t current)
         prev = now;
     }
 }
-void setCurrent(uint16_t current_mA)
+void setCurrentRange(uint16_t current_mA)
 {
     currentSetPoint = current_mA;
 
@@ -258,9 +269,9 @@ void setCurrent(uint16_t current_mA)
 uint32_t calculateCurrent(uint32_t voltage_mV, uint32_t gain, uint32_t resistor_uOhms) 
 {
     // Convert the voltage from millivolts to microvolts
-    uint64_t voltage_uV = (uint64_t)voltage_mV * 1000;
+    uint64_t voltage_uV = (uint64_t) voltage_mV * 1000;
     // Convert the resistor value from milliohms to microohms
-    uint64_t current_mA = (voltage_uV * 1000) / ((uint64_t)gain * (uint64_t)resistor_uOhms);
+    uint64_t current_mA = (voltage_uV * 1000) / ((uint64_t) gain * (uint64_t) resistor_uOhms);
     
     return (uint32_t)current_mA;
 }
