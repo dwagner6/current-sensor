@@ -26,6 +26,7 @@
 
 
 uint32_t current_mA[4];
+uint32_t current_mV[4];
 const uint32_t resistances[]= {RES_UOHMS_1A, RES_UOHMS_5A, \
                             RES_UOHMS_10A, RES_UOHMS_20A};
 static uint8_t adcPins[] = {PIN_ADC_1A, PIN_ADC_5A, \
@@ -40,7 +41,7 @@ static uint16_t currentSetPoint = 0;
 static uint32_t resistance = RES_UOHMS_1A;
 
 enum current_set_state_t{OFF, TOO_LOW, TOO_HIGH, REACHED};
-current_set_state_t currentStateMachineState = OFF;
+current_set_state_t state = OFF;
 
 bool getRawAdc();
 void printCurrentData(uint32_t current_mV, uint16_t current);
@@ -90,13 +91,13 @@ void currentStateMachine()
         current = calculateCurrent(current_mV, CS_GAIN, resistance);
     }
 
-    switch(currentStateMachineState)
+    switch(state)
     {
         // State: Output off, current through circuit is zero
         case OFF: 
             if(currentSetPoint > 0)
             {
-                currentStateMachineState = TOO_LOW;
+                state = TOO_LOW;
                 tps55289_enable_output();
             }
             break;
@@ -106,7 +107,7 @@ void currentStateMachine()
             if(currentSetPoint == 0)
             {
                 // Next state will be OFF
-                currentStateMachineState = OFF;
+                state = OFF;
                 // Set output voltage to zero
                 tps55289_set_vout(0);
                 // Turn off output (discharging capacitors)
@@ -116,14 +117,14 @@ void currentStateMachine()
             // Check if current hasn't gone above set point
             else if( (current > currentSetPoint + CURRENT_SET_MARGIN_MA) )
             {
-                currentStateMachineState = TOO_HIGH;
+                state = TOO_HIGH;
                 break;
             }
             // else if current is within set point margin
             else if( ((current-currentSetPoint) <CURRENT_SET_MARGIN_MA) \
                     || ((currentSetPoint-current) <CURRENT_SET_MARGIN_MA))
             {
-                currentStateMachineState = REACHED;
+                state = REACHED;
                 break;
             }
             else
@@ -140,7 +141,7 @@ void currentStateMachine()
         case TOO_HIGH:
             if(currentSetPoint == 0)
             {
-                currentStateMachineState = OFF;
+                state = OFF;
                 tps55289_set_vout(0);
                 tps55289_disable_output();
                 break;
@@ -148,14 +149,14 @@ void currentStateMachine()
             // Check if current hasn't gone too low
             else if( (current < currentSetPoint - CURRENT_SET_MARGIN_MA) )
             {
-                currentStateMachineState = TOO_LOW;
+                state = TOO_LOW;
                 break;
             }
             // else if current is within set point margin
             else if( ((current-currentSetPoint) <CURRENT_SET_MARGIN_MA) \
                     || ((currentSetPoint-current) <CURRENT_SET_MARGIN_MA))
             {
-                currentStateMachineState = REACHED;
+                state = REACHED;
                 break;
             }
             else
@@ -170,20 +171,20 @@ void currentStateMachine()
         case REACHED:
             if(currentSetPoint == 0)
             {
-                currentStateMachineState = OFF;
+                state = OFF;
                 tps55289_disable_output();
                 break;
             }
             // Check if current hasn't gone too high
             else if( (current > currentSetPoint + CURRENT_SET_MARGIN_MA) )
             {
-                currentStateMachineState = TOO_HIGH;
+                state = TOO_HIGH;
                 break;
             }
             // Check if current hasn't gone too low
             else if( (current < currentSetPoint - CURRENT_SET_MARGIN_MA) )
             {
-                currentStateMachineState = TOO_LOW;
+                state = TOO_LOW;
                 break;
             }
             // Do nothing if output current within margin of set point
@@ -199,7 +200,6 @@ void applicationWorker()
 {
     //currentStateMachine();
 
-    static uint32_t current_mV[4];
 
     // Take ADC readings
     if(getRawAdc())

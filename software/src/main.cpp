@@ -30,15 +30,18 @@
 // Calculate max value of whatever LEDC bit width is chosen (used for
 // calculating duty)
 #define LEDC_BITWIDTH_MAX_VAL (UINT16_MAX >> (16U-LEDC_BIT_RESOLUTION))
-//#define DEBUG_ON
+
+//***********************
+// Uncomment to turn on debug features
+#define DEBUG_ON
 
 
 volatile uint32_t pulseWidth = DEFAULT_PULSEWIDTH;
 volatile bool ledcEnabled = true;
 volatile bool transmitReading = false;
 volatile bool flipbit = false;
-enum {FREQ_SET, WIDTH_SET, CURR_SET, ONOFF_SET, \
-                VOUT_SET, STATUS_SET, ADC_SET};
+enum   {FREQ_SET, WIDTH_SET, CURR_SET, ONOFF_SET, \
+        VOUT_SET, STATUS_SET, ADC_SET, RAW_ADC_SET};
 
 esp_err_t error = ESP_OK;
 
@@ -55,6 +58,7 @@ uint32_t settings_reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
                             0, 0, 0, 0, 0};
 extern current_range_t currentRange;
 extern uint32_t current_mA[4];
+extern uint32_t current_mV[4];
 
 uint64_t lastAdcReadout = 0;
 uint64_t currentAdcReadout;
@@ -146,6 +150,16 @@ void loop()
             }
             adc_chan = (uint8_t) value_int;
         }
+        else if (command_str.equals("raw_adc"))
+        {
+            setting = RAW_ADC_SET;
+            if(value_int > 3)
+            {
+                // Default to adc chan 3 if invalid channel value
+                value_int = 3;
+            }
+            adc_chan = (uint8_t) value_int;
+        }
         else
         {
             Serial.println("Error: no matching command!");
@@ -174,6 +188,10 @@ void loop()
         if(command_str.equals("adc"))
         {
             Serial.printf("%d\n\r", current_mA[adc_chan]);
+        }
+        else if(command_str.equals("raw_adc"))
+        {
+            Serial.printf("%d\n\r", current_mV[adc_chan]);
         }
 
     }
