@@ -33,7 +33,8 @@
 
 //***********************
 // Uncomment to turn on debug features
-#define DEBUG_ON
+// #define DEBUG_ON
+//***********************
 
 
 volatile uint32_t pulseWidth = DEFAULT_PULSEWIDTH;
