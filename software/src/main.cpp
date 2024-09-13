@@ -23,7 +23,7 @@
 
 // TODO: Find minimum timeout necessary for Labview to send commands
 // in order to speed up main loop
-#define SERIAL_TIMEOUT_MS 200 // Timeout when waiting for serial data
+#define SERIAL_TIMEOUT_MS 100 // Timeout when waiting for serial data
 
 // Maximum bit resolution of LEDC timers (used for setting freq, duty)
 #define LEDC_BIT_RESOLUTION 14
@@ -33,7 +33,7 @@
 
 //***********************
 // Uncomment to turn on debug features
-#define DEBUG_ON
+//#define DEBUG_ON
 //***********************
 
 
@@ -41,9 +41,9 @@ volatile uint32_t pulseWidth = DEFAULT_PULSEWIDTH;
 volatile bool ledcEnabled = true;
 volatile bool transmitReading = false;
 volatile bool flipbit = false;
-enum   {NONE, FREQ_SET, WIDTH_SET, CURR_SET, ONOFF_SET, \
+enum   {NONE=-1, FREQ_SET, WIDTH_SET, CURR_SET, ONOFF_SET, \
         VOUT_SET, STATUS_SET, ADC_GET, RAW_ADC_GET, \
-        GET_ALL_SETTINGS, SET_ALL_SETTINGS, GET_ALL_READINGS};
+        GET_ALL_SETTINGS, SEND_ALL_SETTINGS, SEND_ALL_READINGS};
 
 esp_err_t error = ESP_OK;
 
@@ -56,8 +56,8 @@ uint16_t vout = 0;
 uint16_t current = 0;
 uint16_t vout_mv = 0;
 int8_t setting = NONE;
-uint32_t settings_reg[7] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
-                            0, 0, 0, 0, 0};
+uint32_t settings_reg[5] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
+                            0, 0, VOUT_MV_MIN};
 extern current_range_t currentRange;
 extern uint32_t current_mA[4];
 extern uint32_t current_mV[4];
@@ -67,6 +67,9 @@ uint64_t currentAdcReadout;
 
 uint32_t calculateDuty(uint32_t freq, uint32_t pulseWidth_ns);
 void int_to_hex_str(uint8_t num_digits, uint32_t value, char * hex_string);
+void sendAllReadings();
+void sendAllSettings();
+void getAllSettings();
 
 void setup()
 {
@@ -157,15 +160,15 @@ void loop()
         }
         else if (command_str.equals("get_settings"))
         {
-            setting = GET_ALL_SETTINGS;
+            setting = SEND_ALL_SETTINGS;
         }
         else if (command_str.equals("get_readings"))
         {
-            setting = GET_ALL_READINGS;
+            setting = SEND_ALL_READINGS;
         }
-        else if (command_str.equals("set_readings"))
+        else if (command_str.equals("set_settings"))
         {
-            setting = SET_ALL_SETTINGS;
+            setting = GET_ALL_SETTINGS;
         }
         else
         {
@@ -183,8 +186,8 @@ void loop()
         }
 
         // If we're just reading something
-        if(value_str.equals("?") || (setting == GET_ALL_SETTINGS) \
-                                 || (setting == GET_ALL_READINGS) )
+        if(value_str.equals("?") || (setting == SEND_ALL_SETTINGS) \
+                                 || (setting == SEND_ALL_READINGS) )
         {
             is_reading = true;
         }
@@ -311,9 +314,16 @@ void loop()
         Serial.println(current_mV[adc_chan], DEC);
         break;
 
-    case GET_ALL_READINGS:
+    case SEND_ALL_READINGS:
+        sendAllReadings();
+        break;
+
     case GET_ALL_SETTINGS:
-    case SET_ALL_SETTINGS:
+        getAllSettings();
+        break;
+    case SEND_ALL_SETTINGS:
+        sendAllSettings();
+        break;
     case NONE:
     default:
         break;
@@ -325,4 +335,38 @@ uint32_t calculateDuty(uint32_t freq, uint32_t pulseWidth_ns)
     uint64_t period_ns = (1000000000ULL / (uint64_t) freq); 
     uint64_t duty = ((uint64_t) pulseWidth_ns * (LEDC_BITWIDTH_MAX_VAL) )/ period_ns;
     return (uint32_t) duty;
+}
+
+void sendAllReadings()
+{
+    String adc_readings;
+
+    for(uint8_t i = 0; i < 4; i++)
+    {
+        adc_readings.concat(String(current_mA[i]));
+        adc_readings.concat(" ");
+        adc_readings.concat(String(current_mV[i]));
+        adc_readings.concat(" ");
+    }
+    Serial.println(adc_readings);
+}
+
+
+void sendAllSettings()
+{
+    String all_settings;
+    for(uint8_t i = 0; i < 5; i++)
+    {
+        all_settings.concat(settings_reg[i]);
+        all_settings.concat(" ");
+    }
+    all_settings.trim();
+    Serial.println(all_settings);
+
+}
+
+
+void getAllSettings()
+{
+    
 }
