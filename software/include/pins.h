@@ -12,7 +12,7 @@
 #define PIN_ADC_5A 39
 #define PIN_ADC_10A 34
 #define PIN_ADC_20A 33
-#define PIN_ADC_OPT 14
+#define PIN_ADC_OPT 35
 #define ENABLE_PIN 34
 #define DECREASE_PIN 25
 #define INCREASE_PIN 26

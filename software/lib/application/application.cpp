@@ -27,10 +27,11 @@
 
 uint32_t current_mA[4];
 uint32_t current_mV[4];
+uint32_t opt_pwr_mV;
 const uint32_t resistances[]= {RES_UOHMS_1A, RES_UOHMS_5A, \
                             RES_UOHMS_10A, RES_UOHMS_20A};
 static uint8_t adcPins[] = {PIN_ADC_1A, PIN_ADC_5A, \
-                    PIN_ADC_10A, PIN_ADC_20A};
+                    PIN_ADC_10A, PIN_ADC_20A, PIN_ADC_OPT};
 static uint8_t adcPinCount = sizeof(adcPins) / sizeof(uint8_t);
 adc_continuous_data_t *adcResult = NULL;
 static bool adcConversionDone = false;
@@ -55,7 +56,6 @@ void applicationSetup()
 {
     tps55289_initialize();
     adcSetup();
-    Serial.printf("Application setup passed!\n\r");
 }
 
 
@@ -68,7 +68,8 @@ void adcSetup()
     // Setup ADC Continuous with following input:
     // array of pins, count of the pins, how many conversions 
     // per pin in one cycle will happen, sampling frequency, callback function
-    analogContinuous(adcPins, adcPinCount, ADC_CONVERSIONS_PER_PIN, 20000, &adcComplete);
+    if(!analogContinuous(adcPins, adcPinCount, ADC_CONVERSIONS_PER_PIN, 20000, &adcComplete))
+        Serial.println("ADC start error!!");
     // Start conversions
     analogContinuousStart();
 }
@@ -209,6 +210,9 @@ void applicationWorker()
             current_mV[i] = adcResult[i].avg_read_mvolts;
             current_mA[i] = calculateCurrent(current_mV[i], CS_GAIN, resistances[i]);
         }
+
+        // Also get optical power reading
+        opt_pwr_mV = adcResult[4].avg_read_mvolts;
     }
 }
 

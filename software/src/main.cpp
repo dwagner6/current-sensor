@@ -23,7 +23,7 @@
 
 // TODO: Find minimum timeout necessary for Labview to send commands
 // in order to speed up main loop
-#define SERIAL_TIMEOUT_MS 100 // Timeout when waiting for serial data
+#define SERIAL_TIMEOUT_MS 200 // Timeout when waiting for serial data
 
 // Maximum bit resolution of LEDC timers (used for setting freq, duty)
 #define LEDC_BIT_RESOLUTION 14
@@ -33,7 +33,7 @@
 
 //***********************
 // Uncomment to turn on debug features
-//#define DEBUG_ON
+#define DEBUG_ON
 //***********************
 
 
@@ -61,15 +61,21 @@ uint32_t settings_reg[5] = {DEFAULT_FREQ_HZ, DEFAULT_PULSEWIDTH, \
 extern current_range_t currentRange;
 extern uint32_t current_mA[4];
 extern uint32_t current_mV[4];
+extern uint32_t opt_pwr_mV;
+String value_str;
 
 uint64_t lastAdcReadout = 0;
 uint64_t currentAdcReadout;
 
 uint32_t calculateDuty(uint32_t freq, uint32_t pulseWidth_ns);
 void int_to_hex_str(uint8_t num_digits, uint32_t value, char * hex_string);
+void setFreq (uint16_t freq_hz);
+void setWidth (uint16_t width_ns);
+void turnOnOff(uint8_t on_or_off);
+void setVout(uint16_t vout_mv);
 void sendAllReadings();
 void sendAllSettings();
-void getAllSettings();
+void getAndSetAllSettings(String * str);
 
 void setup()
 {
@@ -117,7 +123,7 @@ void loop()
         uint8_t input_len = input_str.length();
 
         // Put anything after the <Space> into its own string
-        String value_str(input_str.substring( (space_loc), (input_len) ));
+        value_str = String(input_str.substring( (space_loc), (input_len) ));
         value_str.trim();
 
         // Make a command string
@@ -192,7 +198,7 @@ void loop()
             is_reading = true;
         }
         // Else we are actually setting something, so record the value
-        else
+        else if(setting != GET_ALL_SETTINGS)
         {
             settings_reg[setting] = value_int;
         }
@@ -212,14 +218,7 @@ void loop()
             break;
         }
         freq = settings_reg[FREQ_SET];
-        if (freq < DEFAULT_MIN_FREQ)
-            freq = DEFAULT_MIN_FREQ;
-        if (freq > DEFAULT_MAX_FREQ)
-            freq = DEFAULT_MAX_FREQ;
-        settings_reg[FREQ_SET] = freq;
-        frequency = ledcChangeFrequency(PIN_PULSE_OUTPUT, freq, LEDC_BIT_RESOLUTION);
-        duty = calculateDuty(frequency, pulseWidth);
-        ledcWrite(PIN_PULSE_OUTPUT, duty);
+        setFreq((uint16_t) freq);
         break;
     
     case WIDTH_SET:
@@ -229,16 +228,7 @@ void loop()
             break;
         }
         pulseWidth = settings_reg[WIDTH_SET];
-        if (pulseWidth < DEFAULT_MIN_PULSEWIDTH)
-            pulseWidth = DEFAULT_MIN_PULSEWIDTH;
-        if (pulseWidth > DEFAULT_MAX_PULSEWIDTH)
-            pulseWidth = DEFAULT_MAX_PULSEWIDTH;
-        settings_reg[WIDTH_SET] = pulseWidth;
-
-        // For either FREQ_SET or WIDTH_SET case, update ledc
-        frequency = ledcChangeFrequency(PIN_PULSE_OUTPUT, freq, LEDC_BIT_RESOLUTION);
-        duty = calculateDuty(frequency, pulseWidth);
-        ledcWrite(PIN_PULSE_OUTPUT, duty);
+        setWidth((uint16_t) pulseWidth);
         break;
 
     case CURR_SET:
@@ -263,17 +253,8 @@ void loop()
             Serial.println(settings_reg[setting], DEC);
             break;
         }
-        if (!settings_reg[ONOFF_SET])
-        {
-            //pulseWidth = 0;
-            tps55289_disable_output();
-            //setCurrent(0);
-        }
-        else
-        {
-            //setCurrent(current);
-            tps55289_enable_output();
-        }
+
+        turnOnOff( (uint8_t) settings_reg[ONOFF_SET]);
         break;
        
     case VOUT_SET:
@@ -282,16 +263,8 @@ void loop()
             Serial.println(settings_reg[setting], DEC);
             break;
         }
-        vout = settings_reg[VOUT_SET];
-        if(vout < VOUT_MV_MIN)
-        {
-            vout = VOUT_MV_MIN;
-        }
-        else if(vout > VOUT_MV_MAX)
-        {
-            vout = VOUT_MV_MAX;
-        }
-        tps55289_set_vout(vout);
+        vout = (uint16_t) settings_reg[VOUT_SET];
+        setVout(vout);
         break;
 
     case ADC_GET:
@@ -319,7 +292,7 @@ void loop()
         break;
 
     case GET_ALL_SETTINGS:
-        getAllSettings();
+        getAndSetAllSettings(&value_str);
         break;
     case SEND_ALL_SETTINGS:
         sendAllSettings();
@@ -348,6 +321,10 @@ void sendAllReadings()
         adc_readings.concat(String(current_mV[i]));
         adc_readings.concat(" ");
     }
+    
+    // Also get optical power reading
+    adc_readings.concat(String(opt_pwr_mV));
+    
     Serial.println(adc_readings);
 }
 
@@ -366,7 +343,92 @@ void sendAllSettings()
 }
 
 
-void getAllSettings()
+void getAndSetAllSettings(String * str)
 {
-    
+    uint16_t freq_val;
+    uint16_t width_val;
+    uint16_t curr_val;
+    uint8_t onoff_val;
+    uint16_t vout_val;
+
+    String freq_str = str->substring(0, str->indexOf(" "));
+    freq_val = freq_str.toInt();
+    str->remove(0, str->indexOf(" ")+1);
+
+    String width_str = str->substring(0, str->indexOf(" "));
+    width_val = width_str.toInt();
+    str->remove(0, str->indexOf(" ")+1);
+
+    String curr_str = str->substring(0, str->indexOf(" "));
+    curr_val = curr_str.toInt();
+    str->remove(0, str->indexOf(" ")+1);
+
+    String onoff_str = str->substring(0, str->indexOf(" "));
+    onoff_val = onoff_str.toInt();
+    str->remove(0, str->indexOf(" ")+1);
+
+    String vout_str = str->substring(0, str->indexOf(" "));
+    vout_val = vout_str.toInt();
+
+    setFreq(freq_val);
+    setWidth(width_val);
+    setVout(vout_val);
+    turnOnOff(onoff_val);
+}
+
+void turnOnOff(uint8_t on_or_off)
+{
+    settings_reg[ONOFF_SET] = on_or_off; 
+    if (!settings_reg[ONOFF_SET])
+    {
+        tps55289_disable_output();
+    }
+    else
+    {
+        tps55289_enable_output();
+    }
+}
+
+void setVout(uint16_t vout_mv)
+{
+    if(vout_mv < VOUT_MV_MIN)
+    {
+        vout_mv = VOUT_MV_MIN;
+    }
+    else if(vout_mv > VOUT_MV_MAX)
+    {
+        vout_mv = VOUT_MV_MAX;
+    }
+    settings_reg[VOUT_SET] = (uint16_t) vout_mv;
+    vout = vout_mv;
+    tps55289_set_vout(vout_mv);
+}
+
+void setFreq(uint16_t freq_hz)
+{
+    if (freq_hz < DEFAULT_MIN_FREQ)
+        freq_hz = DEFAULT_MIN_FREQ;
+    if (freq_hz > DEFAULT_MAX_FREQ)
+        freq_hz = DEFAULT_MAX_FREQ;
+    settings_reg[FREQ_SET] = freq_hz;
+    freq = freq_hz;
+    ledcChangeFrequency(PIN_PULSE_OUTPUT, freq_hz, LEDC_BIT_RESOLUTION);
+    uint32_t duty = calculateDuty(freq_hz, pulseWidth);
+    ledcWrite(PIN_PULSE_OUTPUT, duty);
+}
+
+
+void setWidth (uint16_t width_ns)
+{
+    pulseWidth = width_ns;
+    if (pulseWidth < DEFAULT_MIN_PULSEWIDTH)
+        pulseWidth = DEFAULT_MIN_PULSEWIDTH;
+    if (pulseWidth > DEFAULT_MAX_PULSEWIDTH)
+        pulseWidth = DEFAULT_MAX_PULSEWIDTH;
+    settings_reg[WIDTH_SET] = pulseWidth;
+
+    // For either FREQ_SET or WIDTH_SET case, update ledc
+    ledcChangeFrequency(PIN_PULSE_OUTPUT, freq, LEDC_BIT_RESOLUTION);
+    uint32_t duty = calculateDuty(freq, pulseWidth);
+    ledcWrite(PIN_PULSE_OUTPUT, duty);
 }
