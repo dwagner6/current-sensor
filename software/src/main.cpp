@@ -18,12 +18,12 @@
 #define INPUT_SIZE 30
 #define DELAY 1 // supposedly uS
 #define VOUT_MV_MIN 800  // Min and max Vout on TPS55289 in mV
-#define VOUT_MV_MAX 15000
+#define VOUT_MV_MAX 20000
 #define LEDC_CHAN 0
 
 // TODO: Find minimum timeout necessary for Labview to send commands
 // in order to speed up main loop
-#define SERIAL_TIMEOUT_MS 200 // Timeout when waiting for serial data
+#define SERIAL_TIMEOUT_MS 1000 // Timeout when waiting for serial data
 
 // Maximum bit resolution of LEDC timers (used for setting freq, duty)
 #define LEDC_BIT_RESOLUTION 14
@@ -33,7 +33,7 @@
 
 //***********************
 // Uncomment to turn on debug features
-#define DEBUG_ON
+ #define DEBUG_ON
 //***********************
 
 

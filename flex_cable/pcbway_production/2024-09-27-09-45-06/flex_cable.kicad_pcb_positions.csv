@@ -1,0 +1,5 @@
+﻿pos_x,pos_y,rotation,side,designator,mpn,pack,value,mount_type,place
+24.0,-87.75,-90.0,bottom,TP1,,TestPoint_Pad_4.0x8.0mm,V+,tht,True
+24.0,-97.25,90.0,bottom,TP2,,TestPoint_Pad_4.0x8.0mm,V-,smt,True
+315.75,-87.75,-90.0,bottom,TP3,,TestPoint_Pad_4.0x8.0mm,V+,tht,True
+315.75,-97.25,-90.0,bottom,TP4,,TestPoint_Pad_4.0x8.0mm,V-,tht,True

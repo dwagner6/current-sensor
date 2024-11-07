@@ -5544,26 +5544,6 @@
 		)
 		(uuid "070307a0-f4db-42b7-8bff-d224b5ccb006")
 	)
-	(text "External EEPROM for storing calibration constants"
-		(exclude_from_sim no)
-		(at 63.5 110.49 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-		)
-		(uuid "6a533e4f-c17a-49eb-b013-73195e176005")
-	)
-	(text "Output GPIO pins for external trigger source"
-		(exclude_from_sim no)
-		(at 63.5 105.41 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-		)
-		(uuid "7f984d0d-509d-4ae4-ad2d-bdbe0863db32")
-	)
 	(text "Current Sensing"
 		(exclude_from_sim no)
 		(at 181.61 44.45 0)
@@ -5576,26 +5556,6 @@
 			(justify left bottom)
 		)
 		(uuid "b5f01b0d-0924-432d-a3d9-5d1d51b43d07")
-	)
-	(text "Protection diode connection to VCAP instead"
-		(exclude_from_sim no)
-		(at 156.21 72.39 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-		)
-		(uuid "baab8e47-763b-4bfb-90f2-0e50860c60a5")
-	)
-	(text "Higher current LDO"
-		(exclude_from_sim no)
-		(at 99.06 184.15 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-		)
-		(uuid "d1c09880-6258-4988-9296-4ef33aa06fd2")
 	)
 	(text "X7R, low ESL, 0805"
 		(exclude_from_sim no)

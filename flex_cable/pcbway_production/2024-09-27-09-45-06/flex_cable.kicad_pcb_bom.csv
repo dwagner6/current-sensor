@@ -1,0 +1,3 @@
+﻿designator,quantity,value,pack,mpn,mount_type
+"TP1, TP3",2,V+,TestPoint_Pad_4.0x8.0mm,,tht
+"TP2, TP4",2,V-,TestPoint_Pad_4.0x8.0mm,,smt

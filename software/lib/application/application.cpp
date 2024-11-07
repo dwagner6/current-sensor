@@ -58,7 +58,6 @@ void applicationSetup()
     adcSetup();
 }
 
-
 void adcSetup()
 {
     // Set 12-bit ADC width
