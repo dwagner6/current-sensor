@@ -23,7 +23,7 @@
 
 // TODO: Find minimum timeout necessary for Labview to send commands
 // in order to speed up main loop
-#define SERIAL_TIMEOUT_MS 1000 // Timeout when waiting for serial data
+#define SERIAL_TIMEOUT_MS 400 // Timeout when waiting for serial data
 
 // Maximum bit resolution of LEDC timers (used for setting freq, duty)
 #define LEDC_BIT_RESOLUTION 14
@@ -42,8 +42,8 @@ volatile bool ledcEnabled = true;
 volatile bool transmitReading = false;
 volatile bool flipbit = false;
 enum   {NONE=-1, FREQ_SET, WIDTH_SET, CURR_SET, ONOFF_SET, \
-        VOUT_SET, STATUS_SET, ADC_GET, RAW_ADC_GET, \
-        GET_ALL_SETTINGS, SEND_ALL_SETTINGS, SEND_ALL_READINGS};
+        VOUT_SET, ADC_GET, RAW_ADC_GET, \
+        GET_ALL_SETTINGS, SEND_ALL_SETTINGS, SEND_ALL_READINGS, STATUS};
 
 esp_err_t error = ESP_OK;
 
@@ -152,10 +152,6 @@ void loop()
         {
             setting = VOUT_SET;
         }
-        else if (command_str.equals("status"))
-        {
-            setting = STATUS_SET;
-        }
         else if (command_str.equals("adc"))
         {
             setting = ADC_GET;
@@ -175,6 +171,10 @@ void loop()
         else if (command_str.equals("set_settings"))
         {
             setting = GET_ALL_SETTINGS;
+        }
+        else if (command_str.equals("status"))
+        {
+            setting = STATUS;
         }
         else
         {
@@ -198,7 +198,7 @@ void loop()
             is_reading = true;
         }
         // Else we are actually setting something, so record the value
-        else if(setting != GET_ALL_SETTINGS)
+        else if(setting != GET_ALL_SETTINGS || setting != STATUS)
         {
             settings_reg[setting] = value_int;
         }
@@ -296,6 +296,9 @@ void loop()
         break;
     case SEND_ALL_SETTINGS:
         sendAllSettings();
+        break;
+    case STATUS:
+        tps55289_status_report();
         break;
     case NONE:
     default:

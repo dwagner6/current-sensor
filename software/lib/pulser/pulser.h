@@ -14,13 +14,13 @@
 #define MIN_PULSE_WIDTH 0 // 500 nanoseconds
 #define MAX_PULSE_WIDTH (uint32_t)1000000
 #define STEP_WIDTH 100U // 100 nanosecond steps
-#define DEFAULT_PULSEWIDTH 2000U
+#define DEFAULT_PULSEWIDTH 3000U
 #define DEFAULT_MAX_PULSEWIDTH 1000000U
 #define DEFAULT_MIN_PULSEWIDTH 500U
 #define DEFAULT_FREQ_HZ 1000U
 // TODO: Fix ESP32 ledc functions to accomodate greater frequency resolution
 #define DEFAULT_MAX_FREQ 4000U
-#define DEFAULT_MIN_FREQ 1000U
+#define DEFAULT_MIN_FREQ 100U
 
 bool initialize_pulser();
 bool enable_pulser();

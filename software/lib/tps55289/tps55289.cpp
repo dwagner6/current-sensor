@@ -32,7 +32,8 @@
 #define OCP_DELAY_NONE 0x00
 #define OCP_DELAY_3MS 0x11U
 #define OCP_DELAY_12MS 0x31U
-#define OCP_DISABLE  0x00
+// Current_lim disabled, Current_limit_setting left at default
+#define OCP_DISABLE  0x64
 #define OE_BIT 7
 #define DSCHG_BIT 4
 #define HICCUP_EN_BIT 5
@@ -41,7 +42,9 @@
 #define REF_MIN 0x0000 // Vout = 0.8V
 #define REF_MAX 0x0780 // Vout = 20V
 #define CDC_REG 0x05
-#define CDC_DEFAULT_OPTS 0xE0
+//#define CDC_DEFAULT_OPTS 0xE0
+#define CDC_DEFAULT_OPTS 0x00
+
 
 static uint16_t calculate_ref(uint32_t vout_mv);
 
@@ -128,7 +131,8 @@ uint8_t tps55289_get_status()
 void tps55289_status_report()
 {
     uint8_t status = tps55289_get_status();
-    uint8_t status_bits = status & STATUS_BIT_MASK;
+    Serial.printf("STATUS: 0x%x\n", status);
+    /* uint8_t status_bits = status & STATUS_BIT_MASK;
     uint8_t ovp_bit = (status & OVP_BIT_MASK) >> 5;
     uint8_t ocp_bit = (status & OCP_BIT_MASK) >> 6;
     uint8_t scp_bit = (status & SCP_BIT_MASK) >> 7;
@@ -152,7 +156,7 @@ void tps55289_status_report()
         Serial.println("OCP ON");
 
     if(scp_bit)
-        Serial.println("SCP ON");
+        Serial.println("SCP ON"); */
 
 }
 

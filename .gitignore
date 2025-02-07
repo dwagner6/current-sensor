@@ -5,3 +5,5 @@ cc*.zip
 test*.zip 
 gerbers*.zip
 *.LOG
+*.lck
+*cache
