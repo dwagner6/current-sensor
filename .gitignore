@@ -1,6 +1,6 @@
 software/CurrentSensorBoard3.ino
 hardware/kicad_pulse_supply-rev-B/#auto_saved_files#
-hardware/*/*backups*/*
+hardware/*/*backups*/
 kicad*.zip
 cc*.zip
 test*.zip 
