@@ -24,6 +24,7 @@
 // TODO: Find minimum timeout necessary for Labview to send commands
 // in order to speed up main loop
 #define SERIAL_TIMEOUT_MS 400 // Timeout when waiting for serial data
+#define SERIAL_TIMEOUT_MS_DEBUG 1200
 
 // Maximum bit resolution of LEDC timers (used for setting freq, duty)
 #define LEDC_BIT_RESOLUTION 14
@@ -33,7 +34,7 @@
 
 //***********************
 // Uncomment to turn on debug features
- #define DEBUG_ON
+//#define DEBUG_ON
 //***********************
 
 
@@ -83,7 +84,9 @@ void setup()
     Serial.begin(BAUD_RATE);
 
 // Shorter timeout when not manually sending commands/debugging
-#ifndef DEBUG_ON
+#ifdef DEBUG_ON
+    Serial.setTimeout(SERIAL_TIMEOUT_MS_DEBUG);
+#else
     Serial.setTimeout(SERIAL_TIMEOUT_MS);
 #endif
     if(!ledcAttach(PIN_PULSE_OUTPUT, DEFAULT_FREQ_HZ, LEDC_BIT_RESOLUTION))

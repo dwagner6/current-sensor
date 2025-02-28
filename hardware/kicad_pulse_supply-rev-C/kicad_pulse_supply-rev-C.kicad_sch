@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20231120)
+	(version 20250114)
 	(generator "eeschema")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(uuid "1c135520-adea-42af-a8f1-43758519483b")
 	(paper "A4")
 	(title_block
@@ -93,6 +93,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 	)
 	(symbol
@@ -123,7 +124,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "MountingHole:MountingHole_3.5mm"
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
 			(at 59.69 102.87 0)
 			(effects
 				(font
@@ -141,7 +142,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Mounting Hole without connection"
 			(at 59.69 102.87 0)
 			(effects
 				(font
@@ -187,7 +188,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "MountingHole:MountingHole_3.5mm"
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
 			(at 59.69 90.17 0)
 			(effects
 				(font
@@ -205,7 +206,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Mounting Hole without connection"
 			(at 59.69 90.17 0)
 			(effects
 				(font
@@ -251,7 +252,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "MountingHole:MountingHole_3.5mm"
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
 			(at 59.69 83.82 0)
 			(effects
 				(font
@@ -269,7 +270,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Mounting Hole without connection"
 			(at 59.69 83.82 0)
 			(effects
 				(font
@@ -315,7 +316,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "MountingHole:MountingHole_3.5mm"
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
 			(at 59.69 96.52 0)
 			(effects
 				(font
@@ -333,7 +334,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Mounting Hole without connection"
 			(at 59.69 96.52 0)
 			(effects
 				(font
@@ -354,6 +355,10 @@
 	(sheet
 		(at 142.24 82.55)
 		(size 31.75 20.32)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -363,7 +368,7 @@
 			(color 0 0 0 0.0000)
 		)
 		(uuid "29466eae-66f8-44c1-b80f-ee44a57c3f0c")
-		(property "Sheetname" "GaN FET and Current Sensing"
+		(property "Sheetname" "Switching FET"
 			(at 142.24 81.8384 0)
 			(effects
 				(font
@@ -392,6 +397,10 @@
 	(sheet
 		(at 181.61 82.55)
 		(size 31.75 20.32)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -401,7 +410,7 @@
 			(color 0 0 0 0.0000)
 		)
 		(uuid "75b8d852-df51-4f21-ba65-ed214b4fed79")
-		(property "Sheetname" "Peak Detectors"
+		(property "Sheetname" "Peak Detection"
 			(at 181.61 81.8384 0)
 			(effects
 				(font
@@ -422,7 +431,7 @@
 		(instances
 			(project "kicad_pulse_supply-rev-C"
 				(path "/1c135520-adea-42af-a8f1-43758519483b"
-					(page "4")
+					(page "5")
 				)
 			)
 		)
@@ -430,6 +439,10 @@
 	(sheet
 		(at 104.14 82.55)
 		(size 31.75 20.32)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -466,8 +479,54 @@
 		)
 	)
 	(sheet
+		(at 139.7 115.57)
+		(size 26.67 17.78)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "cf6366cf-34a4-4f70-87b7-af51d6b96cf6")
+		(property "Sheetname" "Current Sensing"
+			(at 139.7 114.8584 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "curr_sense.kicad_sch"
+			(at 139.7 133.9346 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "kicad_pulse_supply-rev-C"
+				(path "/1c135520-adea-42af-a8f1-43758519483b"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
 		(at 102.87 121.92)
 		(size 20.32 11.43)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -477,7 +536,7 @@
 			(color 0 0 0 0.0000)
 		)
 		(uuid "d4bef40f-0c31-48ca-bb6f-724c95e748c8")
-		(property "Sheetname" "Buck Boost Supply"
+		(property "Sheetname" "I2C Voltage Supply"
 			(at 102.87 121.2084 0)
 			(effects
 				(font
@@ -498,7 +557,7 @@
 		(instances
 			(project "kicad_pulse_supply-rev-C"
 				(path "/1c135520-adea-42af-a8f1-43758519483b"
-					(page "5")
+					(page "6")
 				)
 			)
 		)
@@ -508,4 +567,5 @@
 			(page "1")
 		)
 	)
+	(embedded_fonts no)
 )

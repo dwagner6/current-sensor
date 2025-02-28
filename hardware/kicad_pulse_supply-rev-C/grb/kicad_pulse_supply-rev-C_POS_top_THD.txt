@@ -1,0 +1,33 @@
+### Module positions - created on 2025-02-25 12:18
+### Printed by pcb_positions plugin
+## Unit = mm, Angle = deg.
+## Pcb Height 86.100mm, Pcb Width 121.600mm [based on Edge bounding box]
+## Side : top
+## Board Aux Origin: 0.000mm ,0.000mm
+# Ref         Val                 Package                       PosX       PosY       Pin1_PosX  Pin1_PosY    Rot     Side      Type
+J7            A-DF_09_A_KG-T4S    ASSMANN_A-DF_09_A_KG-T4S      55.2860    -98.5130   55.2860    -98.5130     -9.0    top       THD
+TP14          GND                 Keystone-1502-2               149.6160   -139.9780  149.6160   -139.9780     0.0    top       THD
+TP37          PEAK_20A            Keystone-1502-2               128.8660   -150.7280  128.8660   -150.7280     0.0    top       THD
+TP12          VGATE               Keystone-1502-2               53.1660    -111.9780  53.1660    -111.9780     0.0    top       THD
+J4            GPIO                PinHeader_1x04_P2.54mm_Vert.. 155.3660   -141.7780  155.3660   -141.7780    18.0    top       THD
+TP28          CS_10A              Keystone-1502-2               138.1160   -139.9780  138.1160   -139.9780     0.0    top       THD
+TP22          CS_5A               Keystone-1502-2               132.3660   -139.9780  132.3660   -139.9780     0.0    top       THD
+J6            OPT_PWR             BNC_Molex_0731375003          51.0360    -128.7280  56.1160    -128.7280    -9.0    top       THD
+J5            SIG_EXT             BNC_Molex_0731375003          51.1160    -145.7280  56.1960    -145.7280    -9.0    top       THD
+TP13          SIG_EXT             Keystone-1502-2               65.6160    -150.4780  65.6160    -150.4780     0.0    top       THD
+TP30          CS_20A              Keystone-1502-2               144.1160   -139.9780  144.1160   -139.9780     0.0    top       THD
+TP9           GND                 Keystone-1502-2               98.6160    -150.4780  98.6160    -150.4780     9.0    top       THD
+JP2           SIG_SEL             PinHeader_1x03_P2.54mm_Vert.. 60.2910    -117.9780  60.2910    -117.9780    -9.0    top       THD
+TP36          PEAK_10A            Keystone-1502-2               122.9660   -150.5780  122.9660   -150.5780     0.0    top       THD
+TP8           VCAP_IN             Keystone-1502-2               58.0660    -74.5780   58.0660    -74.5780      0.0    top       THD
+TP33          OPT_PEAK            Keystone-1502-2               82.1160    -150.4780  82.1160    -150.4780     0.0    top       THD
+TP11          DUT-                Keystone-1502-2               61.8660    -95.4780   61.8660    -95.4780      0.0    top       THD
+TP32          PEAK_5A             Keystone-1502-2               116.7660   -150.3780  116.7660   -150.3780     0.0    top       THD
+TP34          OPT_SENSE           Keystone-1502-2               90.6160    -150.4780  90.6160    -150.4780     0.0    top       THD
+J3            UART TX RX          PinHeader_1x03_P2.54mm_Vert.. 122.8660   -84.9180   122.8660   -84.9180     18.0    top       THD
+J2            PWR                 PinHeader_1x02_P1.27mm_Vert.. 159.8660   -116.7080  159.8660   -116.7080     0.0    top       THD
+TP10          DUT+                Keystone-1502-2               61.7660    -85.4780   61.7660    -85.4780      0.0    top       THD
+TP35          OPT_RAW             Keystone-1502-2               82.1660    -144.3780  82.1660    -144.3780     0.0    top       THD
+TP31          PEAK_1A             Keystone-1502-2               110.7660   -150.4780  110.7660   -150.4780     0.0    top       THD
+TP18          CS_1A               Keystone-1502-2               126.6160   -139.9780  126.6160   -139.9780     0.0    top       THD
+## End

@@ -1,0 +1,39 @@
+### Module positions - created on 2025-02-25 12:18
+### Printed by pcb_positions plugin
+## Unit = mm, Angle = deg.
+## Pcb Height 86.100mm, Pcb Width 121.600mm [based on Edge bounding box]
+## Side : top
+## Board Aux Origin: 0.000mm ,0.000mm
+# Ref         Val                 Package                       PosX       PosY       Pin1_PosX  Pin1_PosY    Rot     Side      Type
+TP4           ~                   TestPoint_Pad_D1.0mm          133.6160   -109.6280  133.6160   -109.6280     0.0    top       VIRTUAL
+TP3           ~                   TestPoint_Pad_D1.0mm          154.6160   -125.2280  154.6160   -125.2280     0.0    top       VIRTUAL
+TP45          TPS_VCAP            TestPoint_Pad_D1.0mm          81.0660    -94.6780   81.0660    -94.6780     18.0    top       VIRTUAL
+C40           1u5                 C_0603_1608Metric             117.8660   -138.2280  118.6410   -138.2280    18.0    top       VIRTUAL
+C43           1u5                 C_0603_1608Metric             95.3660    -135.4780  96.1410    -135.4780    18.0    top       VIRTUAL
+C46           1u5                 C_0603_1608Metric             78.8910    -141.9780  79.6660    -141.9780    18.0    top       VIRTUAL
+NT4           ~                   Nettie-SMD-2-0.3mm            97.7660    -133.7780  97.2660    -133.7780     0.0    top       VIRTUAL
+R4            0R                  R_0603_1608Metric             142.3660   -102.9780  142.3660   -103.8030     9.0    top       VIRTUAL
+C37           1u5                 C_0603_1608Metric             100.6410   -124.4780  101.4160   -124.4780    18.0    top       VIRTUAL
+TP6           ~                   TestPoint_Pad_D1.0mm          156.3660   -96.4780   156.3660   -96.4780      0.0    top       VIRTUAL
+R5            0R                  R_0603_1608Metric             140.8660   -102.9780  140.8660   -103.8030     9.0    top       VIRTUAL
+NT2           ~                   Nettie-SMD-2-0.3mm            102.9660   -124.9780  102.4660   -124.9780     0.0    top       VIRTUAL
+NT6           ~                   Nettie-SMD-2-0.4mm            105.5660   -96.6780   105.5660   -96.9280      9.0    top       VIRTUAL
+TP40          ~                   TestPoint_Pad_D1.0mm          88.6160    -100.9780  88.6160    -100.9780    18.0    top       VIRTUAL
+TP1           ~                   TestPoint_Pad_D1.0mm          133.6160   -105.1280  133.6160   -105.1280     0.0    top       VIRTUAL
+NT5           ~                   Nettie-SMD-2-0.3mm            81.3160    -140.1780  80.8160    -140.1780     0.0    top       VIRTUAL
+TP41          ~                   TestPoint_Pad_D1.0mm          109.1210   -93.0780   109.1210   -93.0780     18.0    top       VIRTUAL
+TP46          TestPoint           TestPoint_Pad_D1.0mm          116.6160   -125.7280  116.6160   -125.7280     0.0    top       VIRTUAL
+R6            0R                  R_0603_1608Metric             152.3660   -100.1530  152.3660   -99.3280     -9.0    top       VIRTUAL
+NT1           ~                   Nettie-SMD-2-0.3mm            119.8660   -117.7780  119.3660   -117.7780     0.0    top       VIRTUAL
+H2            MountingHole        MountingHole_3.2mm_M3         104.1160   -75.5280   0.0000     0.0000        0.0    top       VIRTUAL
+TP38          ~                   TestPoint_Pad_D1.0mm          104.8710   -99.0780   104.8710   -99.0780     18.0    top       VIRTUAL
+H3            MountingHole        MountingHole_3.2mm_M3         104.1160   -151.9280  0.0000     0.0000        0.0    top       VIRTUAL
+TP39          ~                   TestPoint_Pad_D1.0mm          104.8710   -103.0780  104.8710   -103.0780    18.0    top       VIRTUAL
+NT3           ~                   Nettie-SMD-2-0.3mm            120.3660   -139.3780  119.8660   -139.3780     0.0    top       VIRTUAL
+H1            MountingHole        MountingHole_3.2mm_M3         71.9660    -75.5280   0.0000     0.0000        0.0    top       VIRTUAL
+TP44          ~                   TestPoint_Pad_D1.0mm          88.1210    -79.5780   88.1210    -79.5780     18.0    top       VIRTUAL
+TP42          ~                   TestPoint_Pad_D1.0mm          91.6210    -99.0780   91.6210    -99.0780     18.0    top       VIRTUAL
+TP7           ~                   TestPoint_Pad_D1.0mm          156.3660   -93.7280   156.3660   -93.7280      0.0    top       VIRTUAL
+C34           1u5                 C_0603_1608Metric             117.6160   -117.9280  118.3910   -117.9280    18.0    top       VIRTUAL
+H4            MountingHole        MountingHole_3.2mm_M3         71.9660    -151.9280  0.0000     0.0000        0.0    top       VIRTUAL
+## End
